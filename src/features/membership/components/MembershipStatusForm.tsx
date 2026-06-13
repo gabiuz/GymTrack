@@ -1,0 +1,747 @@
+"use client";
+
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+
+type MemberState = "unassigned" | "guest" | "assigned";
+
+export default function MembershipStatusForm() {
+  const [fullName, setFullName] = useState("Jedia Nicole");
+  const [memberId, setMemberId] = useState("MEM-000001");
+  const [memberState, setMemberState] = useState<MemberState>("unassigned");
+
+  // Load registered user info
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedData = sessionStorage.getItem("register_data");
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          if (parsed.fullName) setFullName(parsed.fullName);
+        } catch (e) {
+          console.error("Failed to parse register_data on membership status page", e);
+        }
+      }
+
+      const savedMemberId = sessionStorage.getItem("member_id");
+      if (savedMemberId) {
+        setMemberId(savedMemberId);
+      }
+    }
+  }, []);
+
+  // Format today's date dynamically (e.g. 12 Jun 2026)
+  const getFormattedDate = () => {
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.toLocaleString("en-US", { month: "short" });
+    const year = today.getFullYear();
+    return `${day} ${month} ${year}`;
+  };
+
+  return (
+    <div className="w-full bg-gym-gray-bg px-5 py-8 grow flex flex-col justify-start">
+      <div className="max-w-120 sm:max-w-160 mx-auto w-full flex flex-col gap-6">
+
+        {/* Header Row */}
+        <div className="w-full flex items-start justify-between">
+          <h1 className="font-space font-bold text-2xl leading-9 sm:leading-10 tracking-tight text-gym-dark">
+            Membership<br />
+            Status
+          </h1>
+
+          <div className={`border rounded-full px-2.5 py-1 flex items-center justify-center shrink-0 mt-1 transition-colors ${memberState === "unassigned"
+            ? "bg-gym-gray-bg border-gray-200 text-gym-gray"
+            : memberState === "guest"
+              ? "bg-gray-100 border-gray-200 text-gym-gray"
+              : "bg-green-50 border-green-600/30 text-green-600"
+            }`}>
+            <span className="font-inter font-semibold text-xs leading-none tracking-wide capitalize">
+              {memberState === "assigned" ? "active" : memberState}
+            </span>
+          </div>
+        </div>
+
+        {/* User Labels */}
+        <div className="-mt-3">
+          <p className="font-inter font-normal text-sm leading-5 tracking-tight text-gym-gray">
+            {fullName} &middot; <span className="font-mono text-xs">{memberId}</span>
+          </p>
+        </div>
+
+        {/* 1. CONDITIONAL RENDER: UNASSIGNED VIEW */}
+        {memberState === "unassigned" && (
+          <>
+            {/* Unassigned Warning Dark Card */}
+            <div className="bg-gym-dark rounded-[20px] p-5 w-full flex flex-col items-start shadow-md animate-in fade-in duration-200">
+              <div className="flex gap-3 items-center w-full mb-4">
+                <div className="bg-white/10 rounded-2xl w-10 h-10 flex items-center justify-center shrink-0">
+                  <svg
+                    className="animate-spin text-white/50"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="10" strokeDasharray="6 6" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="font-space font-bold text-base leading-6 text-white">
+                    No plan assigned yet
+                  </h2>
+                  <p className="font-inter font-normal text-xs leading-tight text-white/40">
+                    Unassigned member
+                  </p>
+                </div>
+              </div>
+
+              <p className="font-inter font-normal text-sm leading-5 text-white/50 pb-5">
+                You&apos;re registered and your QR is ready. Visit the counter to activate a plan or pay for a daily visit.
+              </p>
+
+              <Link
+                href="/my-pass"
+                className="bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-2.5 px-4 inline-flex items-center gap-2 text-gym-dark font-space font-bold text-xs"
+              >
+                View my QR pass
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </Link>
+            </div>
+
+            {/* Pricing structure listings */}
+            <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+              <h3 className="font-inter font-bold text-xs leading-none text-gym-dark tracking-widest uppercase">
+                What you can get
+              </h3>
+
+              <div className="bg-white border border-gray-200 rounded-2xl w-full flex flex-col p-1 shadow-sm">
+                {/* Annual membership row */}
+                <div className="border-b border-gray-200 px-4 py-3.5 flex gap-3 items-center justify-between">
+                  <div className="flex gap-3 items-center min-w-0">
+                    <div className="bg-gym-dark rounded-xl w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+                        <line x1="7" y1="8" x2="17" y2="8" />
+                        <line x1="7" y1="12" x2="17" y2="12" />
+                        <line x1="7" y1="16" x2="13" y2="16" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-inter font-semibold text-xs leading-5 text-gym-dark truncate">
+                        Annual membership
+                      </h4>
+                      <p className="font-inter font-normal text-xs leading-none text-gym-gray/60">
+                        Unlocks ₱70 daily rate + monthly plans
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-space font-bold text-xs leading-5 text-gym-dark shrink-0">
+                    ₱200 / year
+                  </span>
+                </div>
+
+                {/* Daily visit row */}
+                <div className="border-b border-gray-200 px-4 py-3.5 flex gap-3 items-center justify-between">
+                  <div className="flex gap-3 items-center min-w-0">
+                    <div className="bg-gym-dark rounded-xl w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-inter font-semibold text-xs leading-5 text-gym-dark truncate">
+                        Daily visit
+                      </h4>
+                      <p className="font-inter font-normal text-xs leading-none text-gym-gray/60">
+                        Member rate vs non-member
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-space font-bold text-xs leading-5 text-gym-dark shrink-0">
+                    ₱70 / ₱75
+                  </span>
+                </div>
+
+                {/* Monthly plan row */}
+                <div className="px-4 py-3.5 flex gap-3 items-center justify-between">
+                  <div className="flex gap-3 items-center min-w-0">
+                    <div className="bg-gym-dark rounded-xl w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-inter font-semibold text-xs leading-5 text-gym-dark truncate">
+                        Monthly plan
+                      </h4>
+                      <p className="font-inter font-normal text-xs leading-none text-gym-gray/60">
+                        Requires active membership
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-space font-bold text-xs leading-5 text-gym-dark shrink-0">
+                    from ₱799
+                  </span>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* 2. CONDITIONAL RENDER: DAILY GUEST VIEW */}
+        {memberState === "guest" && (
+          <>
+            {/* Guest Visit Dark Card */}
+            <div className="bg-gym-dark rounded-[20px] p-5 w-full flex flex-col items-start shadow-md animate-in fade-in duration-200">
+              <div className="flex items-center justify-between w-full">
+                <span className="font-inter font-bold text-xs leading-[16.5px] text-white/40 tracking-widest uppercase">
+                  Today&apos;s visit
+                </span>
+
+                <div className="bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0">
+                  <span className="font-inter font-semibold text-xs leading-[16.5px] text-white/60 tracking-wide">
+                    Guest
+                  </span>
+                </div>
+              </div>
+
+              {/* Price */}
+              <div className="pt-1">
+                <p className="font-space font-bold text-3.5xl leading-tight text-white">
+                  ₱75
+                </p>
+              </div>
+
+              {/* Rate type */}
+              <div className="pt-1 pb-4">
+                <p className="font-inter font-normal text-xs text-white/40">
+                  daily guest rate &middot; non-member
+                </p>
+              </div>
+
+              {/* Divider Line */}
+              <div className="w-full h-px bg-white/10 my-1" />
+
+              {/* Notice */}
+              <p className="font-inter font-normal text-xs leading-normal text-white/50 pt-4 pb-5">
+                You&apos;re visiting as a guest today. No membership is required &mdash; just pay at the counter and show your QR pass.
+              </p>
+
+              {/* Become a Member Button */}
+              <button
+                onClick={() => setMemberState("unassigned")}
+                className="bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-2.5 px-4 inline-flex items-center justify-center gap-2 text-gym-dark font-space font-bold text-xs focus:outline-none"
+              >
+                Become a member
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Guest Pass Ticket */}
+            <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+              <h3 className="font-inter font-bold text-xs leading-none text-gym-dark tracking-widest uppercase">
+                Your guest pass
+              </h3>
+
+              <div className="bg-white border border-gray-200 rounded-2xl w-full flex flex-col p-4 shadow-sm">
+                <div className="flex gap-3 items-center justify-between pb-3">
+                  <div className="flex gap-3 items-center min-w-0">
+                    <div className="bg-gym-dark rounded-xl w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+                        <line x1="7" y1="8" x2="17" y2="8" />
+                        <line x1="7" y1="12" x2="17" y2="12" />
+                        <line x1="7" y1="16" x2="13" y2="16" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-inter font-semibold text-sm leading-normal text-gym-dark truncate">
+                        Daily visit &mdash; guest
+                      </h4>
+                      <p className="font-inter font-normal text-xs leading-none text-gym-gray/60">
+                        Valid for today only
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-space font-bold text-sm text-gym-dark shrink-0">
+                    ₱75
+                  </span>
+                </div>
+
+                {/* Divider & Date info */}
+                <div className="border-t border-gray-200 pt-3 flex items-center justify-between">
+                  <span className="font-inter font-normal text-xs text-gym-gray">
+                    Date
+                  </span>
+                  <span className="font-inter font-medium text-xs text-gym-dark">
+                    {getFormattedDate()}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Savings section */}
+            <div className="flex flex-col gap-3 animate-in fade-in duration-200">
+              <div className="bg-gray-100 border border-gray-200 rounded-2xl w-full p-4 flex flex-col gap-3 shadow-xs">
+                <h3 className="font-inter font-bold text-xs leading-none text-gym-dark tracking-widest uppercase">
+                  Save by becoming a member
+                </h3>
+
+                <div className="flex flex-col w-full">
+                  {/* Row 1: Annual Membership */}
+                  <div className="border-b border-gray-200 pb-2 pt-1.5 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-inter font-semibold text-xs text-gym-dark">
+                        Annual membership
+                      </h4>
+                      <p className="font-inter font-normal text-xs text-gym-gray/60">
+                        One-time fee, unlimited check-ins
+                      </p>
+                    </div>
+                    <span className="font-space font-bold text-xs text-gym-dark">
+                      ₱200 / yr
+                    </span>
+                  </div>
+
+                  {/* Row 2: Member daily rate */}
+                  <div className="border-b border-gray-200 py-2.5 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-inter font-semibold text-xs text-gym-dark">
+                        Member daily rate
+                      </h4>
+                      <p className="font-inter font-normal text-xs text-gym-gray/60">
+                        Save ₱5 vs guest rate
+                      </p>
+                    </div>
+                    <span className="font-space font-bold text-xs text-gym-dark">
+                      ₱70 / visit
+                    </span>
+                  </div>
+
+                  {/* Row 3: Monthly plan */}
+                  <div className="py-2.5 flex justify-between items-center">
+                    <div>
+                      <h4 className="font-inter font-semibold text-xs text-gym-dark">
+                        Monthly plan
+                      </h4>
+                      <p className="font-inter font-normal text-xs text-gym-gray/60">
+                        Unlimited access, best value
+                      </p>
+                    </div>
+                    <span className="font-space font-bold text-xs text-gym-dark">
+                      from ₱799 / mo
+                    </span>
+                  </div>
+                </div>
+
+                {/* CTA register button */}
+                <Link
+                  href="/register"
+                  className="w-full bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-3.5 flex items-center justify-center gap-2 text-gym-dark font-space font-bold text-sm mt-2"
+                >
+                  Register now &mdash; it&apos;s free
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* 3. CONDITIONAL RENDER: PLAN ASSIGNED/ACTIVE VIEW */}
+        {memberState === "assigned" && (
+          <div className="flex flex-col gap-4 w-full">
+            {/* Active Status Dark Card */}
+            <div className="bg-gym-dark rounded-[20px] p-5 w-full flex flex-col items-start shadow-md animate-in fade-in duration-200">
+              <div className="flex items-center justify-between w-full">
+                <span className="font-inter font-bold text-xs leading-[16.5px] text-white/45 tracking-widest uppercase">
+                  Current status
+                </span>
+
+                <div className="bg-green-600/20 border border-green-600/40 rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0">
+                  <span className="font-inter font-semibold text-xs leading-none text-green-400 tracking-wide">
+                    Active
+                  </span>
+                </div>
+              </div>
+
+              {/* Price Row */}
+              <div className="pt-1 flex items-baseline gap-2">
+                <p className="font-space font-bold text-3xl leading-tight text-white">
+                  ₱70
+                </p>
+                <p className="font-space font-normal text-sm leading-tight text-white/30 line-through">
+                  ₱75
+                </p>
+              </div>
+
+              {/* Rate type */}
+              <div className="pt-1 pb-4">
+                <p className="font-inter font-normal text-xs text-white/40">
+                  per daily visit &middot; member rate
+                </p>
+              </div>
+
+              {/* Divider Line */}
+              <div className="w-full h-px bg-white/10 my-1" />
+
+              {/* Dates Row */}
+              <div className="flex gap-4 items-start pt-4 w-full">
+                <div className="flex flex-col">
+                  <span className="font-inter font-normal text-xs text-white/30 tracking-wide">
+                    Member since
+                  </span>
+                  <span className="font-inter font-semibold text-xs text-white mt-0.5">
+                    12 Jan 2026
+                  </span>
+                </div>
+
+                <div className="w-px bg-white/10 h-8 self-center" />
+
+                <div className="flex flex-col">
+                  <span className="font-inter font-normal text-xs text-white/30 tracking-wide">
+                    Annual expires
+                  </span>
+                  <span className="font-inter font-semibold text-xs text-white mt-0.5">
+                    12 Jan 2027
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Annual Membership White Card */}
+            <div className="bg-white border border-gray-200 rounded-2xl w-full p-4 flex flex-col shadow-sm animate-in fade-in duration-200">
+              <div className="flex gap-3 items-center justify-between pb-3">
+                <div className="flex gap-3 items-center min-w-0">
+                  <div className="bg-gym-dark rounded-xl w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="4" width="18" height="16" rx="2" ry="2" />
+                      <line x1="7" y1="8" x2="17" y2="8" />
+                      <line x1="7" y1="12" x2="17" y2="12" />
+                      <line x1="7" y1="16" x2="13" y2="16" />
+                    </svg>
+                  </div>
+                  <span className="font-inter font-semibold text-sm text-gym-dark truncate">
+                    Annual membership
+                  </span>
+                </div>
+
+                <div className="bg-green-50 border border-green-600/30 rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0">
+                  <span className="font-inter font-semibold text-xs leading-none text-green-600 tracking-wide">
+                    Active
+                  </span>
+                </div>
+              </div>
+
+              {/* Started Row */}
+              <div className="border-t border-gray-200 py-2.5 flex items-center justify-between">
+                <span className="font-inter font-normal text-xs text-gym-gray">
+                  Started
+                </span>
+                <span className="font-inter font-medium text-xs text-gym-dark">
+                  12 Jan 2026
+                </span>
+              </div>
+
+              {/* Expires Row */}
+              <div className="border-t border-gray-200 py-2.5 flex items-center justify-between">
+                <span className="font-inter font-normal text-xs text-gym-gray">
+                  Expires
+                </span>
+                <span className="font-inter font-medium text-xs text-gym-dark">
+                  12 Jan 2027
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="border-t border-gray-200 pt-3 flex flex-col gap-1.5">
+                <div className="bg-gym-gray-bg h-1.5 rounded-full w-full overflow-hidden">
+                  <div className="bg-gym-lime h-full rounded-full w-[41%]" />
+                </div>
+                <span className="font-inter font-normal text-xs text-gym-gray/60">
+                  217 days remaining &middot; ₱200 / year
+                </span>
+              </div>
+            </div>
+
+            {/* Monthly Plan White Card */}
+            <div className="bg-white border border-amber-200 rounded-2xl w-full p-4 flex flex-col shadow-sm animate-in fade-in duration-200">
+              <div className="flex gap-3 items-center justify-between pb-3">
+                <div className="flex gap-3 items-center min-w-0">
+                  <div className="bg-gym-dark rounded-[14px] w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                  </div>
+                  <span className="font-inter font-semibold text-sm text-gym-dark truncate">
+                    Monthly plan
+                  </span>
+                </div>
+
+                <div className="bg-amber-50 rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0">
+                  <span className="font-inter font-semibold text-xs leading-[16.5px] text-amber-600 tracking-wide">
+                    Expiring soon
+                  </span>
+                </div>
+              </div>
+
+              {/* Plan Row */}
+              <div className="border-t border-gray-200 py-2.5 flex items-center justify-between">
+                <span className="font-inter font-normal text-xs text-gym-gray">
+                  Plan
+                </span>
+                <span className="font-inter font-medium text-xs text-gym-dark">
+                  1 month &middot; ₱799
+                </span>
+              </div>
+
+              {/* Expires Row */}
+              <div className="border-t border-gray-200 py-2.5 flex items-center justify-between">
+                <span className="font-inter font-normal text-xs text-gym-gray">
+                  Expires
+                </span>
+                <span className="font-inter font-semibold text-xs text-amber-600">
+                  9 Jul 2026
+                </span>
+              </div>
+
+              {/* Alert Warning Row */}
+              <div className="border-t border-gray-200 pt-3 flex items-center gap-1.5 text-amber-600">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="shrink-0"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                <span className="font-inter font-normal text-xs leading-tight">
+                  5 days left &mdash; renew at the counter
+                </span>
+              </div>
+            </div>
+
+            {/* Daily Visit Rate Benefit White Card */}
+            <div className="bg-white border border-gray-200 rounded-2xl w-full p-4 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
+              <div className="flex gap-3 items-center min-w-0">
+                <div className="bg-gym-dark rounded-xl w-8 h-8 flex items-center justify-center shrink-0 text-white">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <p className="font-inter font-normal text-xs leading-tight text-gym-gray/60">
+                    Your member benefit
+                  </p>
+                  <h4 className="font-inter font-semibold text-sm leading-normal text-gym-dark truncate mt-0.5">
+                    Daily visit rate
+                  </h4>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end shrink-0">
+                <span className="font-space font-bold text-lg text-gym-dark leading-tight">
+                  ₱70
+                </span>
+                <span className="font-inter font-normal text-xs text-gym-gray/60 line-through leading-tight mt-0.5">
+                  ₱75 guest
+                </span>
+              </div>
+            </div>
+
+            {/* View my QR Pass button */}
+            <Link
+              href="/my-pass"
+              className="w-full bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-3.5 flex items-center justify-center gap-2 text-gym-dark font-space font-bold text-sm mt-2 shadow-xs"
+            >
+              View my QR pass
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </Link>
+          </div>
+        )}
+
+        {/* Demo State Switcher Selector */}
+        <div className="border-t border-gray-200 border-dashed pt-6 mt-6 flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span className="font-inter font-bold text-xs leading-tight text-gym-gray/60 tracking-wider uppercase">
+              Demo &middot; member state
+            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setMemberState("unassigned")}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer ${memberState === "unassigned"
+                  ? "bg-gym-dark text-gym-gray-bg border border-gym-dark shadow-xs"
+                  : "bg-white text-gym-gray border border-gray-200 hover:bg-gray-100"
+                  }`}
+              >
+                Unassigned
+              </button>
+              <button
+                onClick={() => setMemberState("assigned")}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer ${memberState === "assigned"
+                  ? "bg-gym-dark text-gym-gray-bg border border-gym-dark shadow-xs"
+                  : "bg-white text-gym-gray border border-gray-200 hover:bg-gray-100"
+                  }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setMemberState("guest")}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer ${memberState === "guest"
+                  ? "bg-gym-dark text-gym-gray-bg border border-gym-dark shadow-xs"
+                  : "bg-white text-gym-gray border border-gray-200 hover:bg-gray-100"
+                  }`}
+              >
+                Daily Guest
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
