@@ -1,2 +1,2 @@
 // Membership Feature Module
-// Exports all components needed to render the Membership page.
+export { default as MembershipStatusForm } from "./components/MembershipStatusForm";
