@@ -64,34 +64,50 @@ const QrCodePlaceholder = () => {
 };
 
 export default function MyPassForm() {
-  const [fullName, setFullName] = useState("Jedia Nicole");
-  const [memberId, setMemberId] = useState("MEM-000001");
+  const [fullName, setFullName] = useState("");
+  const [memberId, setMemberId] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  // Load registered user info
+  // Load member info
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedData = sessionStorage.getItem("register_data");
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (parsed.fullName) setFullName(parsed.fullName);
-          if (parsed.photoPreview) setPhotoPreview(parsed.photoPreview);
-        } catch (e) {
-          console.error("Failed to parse register_data on my-pass page", e);
-        }
-      }
+    if (typeof window === "undefined") return;
 
-      const savedMemberId = sessionStorage.getItem("member_id");
-      if (savedMemberId) {
-        setMemberId(savedMemberId);
+    // Primary: data saved by the login API response
+    const memberDataRaw = sessionStorage.getItem("member_data");
+    if (memberDataRaw) {
+      try {
+        const parsed = JSON.parse(memberDataRaw);
+        if (parsed.fullName) setFullName(parsed.fullName);
+        if (parsed.photoUrl) setPhotoPreview(parsed.photoUrl);
+      } catch (e) {
+        console.error("Failed to parse member_data on my-pass page", e);
       }
     }
+
+    // member_id and qr_code are set by both login and registration flows
+    const savedMemberId = sessionStorage.getItem("member_id");
+    if (savedMemberId) setMemberId(savedMemberId);
+
+    const savedQrCode = sessionStorage.getItem("qr_code");
+    if (savedQrCode) setQrCode(savedQrCode);
   }, []);
 
-  // Client-side HTML5 Canvas QR download logic
+  // Client-side QR download logic
   const handleDownloadQR = () => {
+    if (qrCode) {
+      const downloadLink = document.createElement("a");
+      downloadLink.href = qrCode;
+      downloadLink.download = `${memberId}-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      setShowModal(true);
+      return;
+    }
+
+    // Fallback: serialize the SVG placeholder to PNG via canvas
     const svgElement = document.getElementById("mypass-qrcode-svg");
     if (!svgElement) return;
 
@@ -107,7 +123,6 @@ export default function MyPassForm() {
       canvas.height = 300;
       const context = canvas.getContext("2d");
       if (context) {
-        // Render background and dynamic SVG to canvas
         context.fillStyle = "#ffffff";
         context.fillRect(0, 0, 300, 300);
         context.drawImage(image, 15, 15, 270, 270);
@@ -120,7 +135,6 @@ export default function MyPassForm() {
         downloadLink.click();
         document.body.removeChild(downloadLink);
 
-        // Show success modal
         setShowModal(true);
       }
       URL.revokeObjectURL(blobURL);
@@ -193,7 +207,18 @@ export default function MyPassForm() {
             {/* QR Card Container */}
             <div className="pb-4">
               <div className="bg-white p-3 rounded-2xl w-44 h-44 flex items-center justify-center shadow-inner">
-                <QrCodePlaceholder />
+                {qrCode ? (
+                  <Image
+                    src={qrCode}
+                    alt={`QR code for ${memberId}`}
+                    width={160}
+                    height={160}
+                    className="w-full h-full object-contain"
+                    unoptimized
+                  />
+                ) : (
+                  <QrCodePlaceholder />
+                )}
               </div>
             </div>
 

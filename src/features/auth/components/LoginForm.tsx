@@ -12,17 +12,57 @@ export default function LoginForm() {
   const [memberId, setMemberId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form Validation
   const isFormValid = memberId.trim() !== "" && password.trim() !== "";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isFormValid) {
-      // Navigate to My Pass page upon successful login
+    if (!isFormValid) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identifier: memberId, password }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setError(json.error ?? "Login failed. Please try again.");
+        return;
+      }
+
+      // Store member session data
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("member_id", json.data.memberId);
+        sessionStorage.setItem("qr_code", json.data.qrCode ?? "");
+        sessionStorage.setItem(
+          "member_data",
+          JSON.stringify({
+            memberId: json.data.memberId,
+            fullName: json.data.fullName,
+            contactNumber: json.data.contactNumber,
+            gender: json.data.gender,
+            photoUrl: json.data.photoUrl,
+          })
+        );
+      }
+
       router.push("/my-pass");
+    } catch {
+      setError("A network error occurred. Please check your connection.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
 
   return (
     <div className="w-full bg-gym-gray-bg px-5 py-10 grow flex flex-col justify-start">
@@ -123,23 +163,69 @@ export default function LoginForm() {
             </Link>
           </div>
 
+          {/* Error Banner */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2.5 mt-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#dc2626"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="shrink-0 mt-0.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <p className="font-inter font-normal text-xs leading-5 text-red-700">{error}</p>
+            </div>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={!isFormValid}
-            className={`w-full flex gap-2 items-center justify-center rounded-full py-3.5 px-6 font-space font-medium text-base text-center transition-all duration-200 mt-8 ${isFormValid
-              ? "bg-gym-lime text-gym-dark cursor-pointer hover:opacity-90 active:scale-[0.99]"
-              : "bg-[#f3f5fa] text-[#6b7280] cursor-not-allowed"
-              }`}
+            disabled={!isFormValid || isLoading}
+            className={`w-full flex gap-2 items-center justify-center rounded-full py-3.5 px-6 font-space font-medium text-base text-center transition-all duration-200 mt-8 ${
+              isFormValid && !isLoading
+                ? "bg-gym-lime text-gym-dark cursor-pointer hover:opacity-90 active:scale-[0.99]"
+                : "bg-[#f3f5fa] text-[#6b7280] cursor-not-allowed"
+            }`}
           >
-            Log in
-            <Image
-              src="/icons/arrow-right.svg"
-              alt="Arrow Right"
-              width={16}
-              height={16}
-              className="object-contain"
-            />
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Logging in…
+              </>
+            ) : (
+              <>
+                Log in
+                <Image
+                  src="/icons/arrow-right.svg"
+                  alt="Arrow Right"
+                  width={16}
+                  height={16}
+                  className="object-contain"
+                />
+              </>
+            )}
           </button>
 
           {/* Separator / Divider */}

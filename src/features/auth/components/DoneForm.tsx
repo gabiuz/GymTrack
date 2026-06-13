@@ -6,19 +6,12 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function DoneForm() {
-  const [memberId, setMemberId] = useState("MEM-000001");
+  const [memberId, setMemberId] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      // Try to load or generate a persistent mock Member ID
-      let savedMemberId = sessionStorage.getItem("member_id");
-      if (!savedMemberId) {
-        // Generate a random 6-digit number for the ID
-        const randomNum = Math.floor(100000 + Math.random() * 900000);
-        savedMemberId = `MEM-${randomNum}`;
-        sessionStorage.setItem("member_id", savedMemberId);
-      }
-      setMemberId(savedMemberId);
+      const savedMemberId = sessionStorage.getItem("member_id");
+      setMemberId(savedMemberId ?? "");
     }
   }, []);
 

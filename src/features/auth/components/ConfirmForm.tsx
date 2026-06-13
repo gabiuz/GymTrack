@@ -9,6 +9,8 @@ import Image from "next/image";
 
 export default function ConfirmForm() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Form Details State (loaded from sessionStorage)
   const [fullName, setFullName] = useState("Jedia Nicole"); // Default mock values just in case
@@ -62,9 +64,61 @@ export default function ConfirmForm() {
     fileInputRef.current?.click();
   };
 
-  const handleConfirm = () => {
-    // Navigate to step 3: done/success page
-    router.push("/done");
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const savedData =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("register_data")
+          : null;
+      const parsed = savedData ? JSON.parse(savedData) : {};
+
+      // Parse date of birth from "MM / DD / YYYY" → ISO 8601
+      let dateOfBirth: string | undefined;
+      if (parsed.dob && parsed.dob.trim() !== "") {
+        const parts = parsed.dob.replace(/\s/g, "").split("/");
+        if (parts.length === 3) {
+          const iso = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`;
+          if (!isNaN(new Date(iso).getTime())) dateOfBirth = iso;
+        }
+      }
+
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: parsed.fullName,
+          contactNumber: parsed.contactNumber,
+          address: parsed.address,
+          gender: parsed.gender,
+          dateOfBirth,
+          emergencyContact: parsed.emergencyContact || undefined,
+          photoUrl: parsed.photoPreview || undefined,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setError(json.error ?? "Registration failed. Please try again.");
+        return;
+      }
+
+      // Store the real member ID returned by the API
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("member_id", json.data.memberId);
+        sessionStorage.setItem("qr_code", json.data.qrCode ?? "");
+        sessionStorage.removeItem("register_data");
+      }
+
+      router.push("/done");
+    } catch {
+      setError("A network error occurred. Please check your connection.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -268,6 +322,29 @@ export default function ConfirmForm() {
           </p>
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#dc2626"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="shrink-0 mt-0.5"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p className="font-inter font-normal text-xs leading-5 text-red-700">{error}</p>
+          </div>
+        )}
+
         {/* Footer Navigation Row */}
         <div className="flex gap-2.5 items-center pt-6 w-full">
           {/* Back Button */}
@@ -294,9 +371,34 @@ export default function ConfirmForm() {
           {/* Confirm & Register Button */}
           <button
             onClick={handleConfirm}
-            className="grow bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-4 text-center text-gym-dark font-space font-bold text-[14px]"
+            disabled={isLoading}
+            className={`grow rounded-full py-4 text-center text-gym-dark font-space font-bold text-[14px] transition-all flex items-center justify-center gap-2 ${
+              isLoading
+                ? "bg-gym-lime/70 cursor-not-allowed"
+                : "bg-gym-lime hover:opacity-90 active:scale-[0.99]"
+            }`}
           >
-            Confirm & register
+            {isLoading ? (
+              <>
+                <svg
+                  className="animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Registering…
+              </>
+            ) : (
+              "Confirm & register"
+            )}
           </button>
         </div>
       </div>
