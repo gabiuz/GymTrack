@@ -38,7 +38,7 @@ export function PaymentsView() {
       </div>
 
       {/* Stats */}
-      <div className="flex gap-3 mb-5">
+      <div className="flex flex-col lg:flex-row gap-3 mb-5">
         {[
           { label: "Today",      val: "₱1,860" },
           { label: "This week",  val: "₱12,440" },
@@ -69,31 +69,33 @@ export function PaymentsView() {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-black/8 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border-b border-black/8 text-[11px] text-gray-400 font-semibold tracking-widest uppercase font-inter sticky top-0 z-10">
-          <span className="flex-1">Member</span>
-          <span className="w-[106px]">Type</span>
-          <span className="w-[76px] text-right">Amount</span>
-          <span className="w-[52px] text-right">Time</span>
-          <span className="w-[46px] text-right">Staff</span>
-        </div>
-        <div className="max-h-[360px] overflow-y-auto">
-          {filtered.map((p, i) => (
-            <div key={i} className={`flex items-center gap-2.5 px-4 py-3 text-[13px] font-inter ${i < filtered.length - 1 ? "border-b border-black/8" : ""}`}>
-              <div className="flex-1">
-                <div className="font-semibold text-gym-dark">{p.member}</div>
-                <div className="text-[11px] text-gray-300 font-mono mt-0.5">{p.id}</div>
+      <div className="bg-white border border-black/8 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-x-auto">
+        <div className="min-w-[500px] lg:min-w-0">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border-b border-black/8 text-[11px] text-gray-400 font-semibold tracking-widest uppercase font-inter sticky top-0 z-10">
+            <span className="flex-1">Member</span>
+            <span className="w-[106px]">Type</span>
+            <span className="w-[76px] text-right">Amount</span>
+            <span className="w-[52px] text-right">Time</span>
+            <span className="w-[46px] text-right">Staff</span>
+          </div>
+          <div className="max-h-[360px] overflow-y-auto">
+            {filtered.map((p, i) => (
+              <div key={i} className={`flex items-center gap-2.5 px-4 py-3 text-[13px] font-inter ${i < filtered.length - 1 ? "border-b border-black/8" : ""}`}>
+                <div className="flex-1">
+                  <div className="font-semibold text-gym-dark">{p.member}</div>
+                  <div className="text-[11px] text-gray-300 font-mono mt-0.5">{p.id}</div>
+                </div>
+                <span className="w-[106px]">
+                  <StatusPill variant={typeVariant(p.type)}>{p.type}</StatusPill>
+                </span>
+                <span className="w-[76px] text-right font-bold text-gym-dark font-space text-sm">
+                  ₱{p.amount.toLocaleString()}
+                </span>
+                <span className="w-[52px] text-right text-gray-400">{p.time}</span>
+                <span className="w-[46px] text-right text-gray-400">{p.staff}</span>
               </div>
-              <span className="w-[106px]">
-                <StatusPill variant={typeVariant(p.type)}>{p.type}</StatusPill>
-              </span>
-              <span className="w-[76px] text-right font-bold text-gym-dark font-space text-sm">
-                ₱{p.amount.toLocaleString()}
-              </span>
-              <span className="w-[52px] text-right text-gray-400">{p.time}</span>
-              <span className="w-[46px] text-right text-gray-400">{p.staff}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
       <div className="text-xs text-gray-400 text-center mt-3 font-inter">

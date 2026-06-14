@@ -128,7 +128,7 @@ export function AttendanceView() {
       </div>
 
       {/* Stats */}
-      <div className="flex gap-3 mb-5">
+      <div className="flex flex-col lg:flex-row gap-3 mb-5">
         {[
           { label: "Today",                                                                                                     val: stats.today },
           { label: range === "today" ? "Check-ins" : range === "3d" ? "3-day total" : range === "7d" ? "7-day total" : "30-day total", val: stats.total },
@@ -177,32 +177,34 @@ export function AttendanceView() {
       </div>
 
       {/* Check-in log */}
-      <div className="bg-white border border-black/8 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-        <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border-b border-black/8 text-[11px] text-gray-400 font-semibold tracking-widest uppercase font-inter sticky top-0 z-10">
-          <span className="flex-1">Member</span>
-          <span className="w-32">Visit type</span>
-          <span className="w-[90px] text-right">Date</span>
-          <span className="w-[72px] text-right">Time</span>
-        </div>
-        <div className="max-h-[360px] overflow-y-auto">
-          {checkins.map((c, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-2.5 px-4 py-3 text-[13px] font-inter ${i < checkins.length - 1 ? "border-b border-black/8" : ""}`}
-            >
-              <div className="flex-1">
-                <div className="font-semibold text-gym-dark">{c.member}</div>
-                <div className="text-[11px] text-gray-300 font-mono mt-0.5">{c.id}</div>
+      <div className="bg-white border border-black/8 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-x-auto">
+        <div className="min-w-[500px] lg:min-w-0">
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border-b border-black/8 text-[11px] text-gray-400 font-semibold tracking-widest uppercase font-inter sticky top-0 z-10">
+            <span className="flex-1">Member</span>
+            <span className="w-32">Visit type</span>
+            <span className="w-[90px] text-right">Date</span>
+            <span className="w-[72px] text-right">Time</span>
+          </div>
+          <div className="max-h-[360px] overflow-y-auto">
+            {checkins.map((c, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-2.5 px-4 py-3 text-[13px] font-inter ${i < checkins.length - 1 ? "border-b border-black/8" : ""}`}
+              >
+                <div className="flex-1">
+                  <div className="font-semibold text-gym-dark">{c.member}</div>
+                  <div className="text-[11px] text-gray-300 font-mono mt-0.5">{c.id}</div>
+                </div>
+                <span className="w-32">
+                  <StatusPill variant={typeVariant(c.type)}>{c.type}</StatusPill>
+                </span>
+                <span className={`w-[90px] text-right text-xs font-inter ${c.date === "Today" ? "text-green-600 font-semibold" : "text-gray-400"}`}>
+                  {c.date}
+                </span>
+                <span className="w-[72px] text-right text-gray-400">{c.time}</span>
               </div>
-              <span className="w-32">
-                <StatusPill variant={typeVariant(c.type)}>{c.type}</StatusPill>
-              </span>
-              <span className={`w-[90px] text-right text-xs font-inter ${c.date === "Today" ? "text-green-600 font-semibold" : "text-gray-400"}`}>
-                {c.date}
-              </span>
-              <span className="w-[72px] text-right text-gray-400">{c.time}</span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

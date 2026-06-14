@@ -21,7 +21,7 @@ export function AdminToast({ show, title, subtitle, onClose }: AdminToastProps) 
   if (!show) return null;
 
   return (
-    <div className="fixed right-6 bottom-6 w-80 bg-white border border-black/8 border-l-[3px] border-l-gym-lime rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] p-3.5 flex items-start gap-3 z-50 font-inter">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 lg:left-auto lg:translate-x-0 lg:right-6 w-[calc(100%-2rem)] lg:w-80 bg-white border border-black/8 border-l-[3px] border-l-gym-lime rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] p-3.5 flex items-start gap-3 z-50 font-inter">
       <div className="w-7 h-7 rounded-full bg-gym-lime/20 flex items-center justify-center text-green-600 shrink-0">
         <Check size={14} />
       </div>

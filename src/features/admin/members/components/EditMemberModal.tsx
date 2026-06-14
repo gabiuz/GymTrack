@@ -68,7 +68,7 @@ export function EditMemberModal({ open, member, onClose, onConfirm }: EditMember
         </div>
         <div className="px-5 py-4.5">
           <Field label="Full name" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <Field label="Contact" value={form.contact} onChange={(v) => setForm((f) => ({ ...f, contact: v }))} />
             <Field label="Birth date" value={form.birth} onChange={(v) => setForm((f) => ({ ...f, birth: v }))} />
           </div>

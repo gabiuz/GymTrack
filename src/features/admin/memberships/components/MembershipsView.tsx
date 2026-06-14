@@ -50,7 +50,7 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
       </div>
 
       {/* Stats */}
-      <div className="flex gap-3 mb-5">
+      <div className="flex flex-col lg:flex-row gap-3 mb-5">
         {[
           { label: "All active",     val: "231", className: "text-gym-dark" },
           { label: "Expiring (7d)",  val: "9",   className: "text-amber-500" },
@@ -64,49 +64,51 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-black/8 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
-        {/* Header */}
-        <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border-b border-black/8 text-[11px] text-gray-400 font-semibold tracking-widest uppercase font-inter sticky top-0 z-10">
-          <span className="flex-1">Member</span>
-          <span className="w-26">Expires</span>
-          <span className="w-22">Status</span>
-          <span className="w-20 text-right">Action</span>
-        </div>
-        <div className="max-h-[360px] overflow-y-auto">
-          {data.map((m, i) => (
-            <div
-              key={m.id}
-              className={`flex items-center gap-2.5 px-4 py-3 text-[13px] font-inter ${i < data.length - 1 ? "border-b border-black/8" : ""}`}
-            >
-              <div className="flex-1">
-                <div className="font-semibold text-gym-dark">{m.name}</div>
-                <div className="text-[11px] text-gray-300 font-mono mt-0.5">{m.id}</div>
+      <div className="bg-white border border-black/8 rounded-xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-x-auto">
+        <div className="min-w-[540px] lg:min-w-0">
+          {/* Header */}
+          <div className="flex items-center gap-2.5 px-4 py-2.5 bg-gray-50 border-b border-black/8 text-[11px] text-gray-400 font-semibold tracking-widest uppercase font-inter sticky top-0 z-10">
+            <span className="flex-1">Member</span>
+            <span className="w-26">Expires</span>
+            <span className="w-22">Status</span>
+            <span className="w-20 text-right">Action</span>
+          </div>
+          <div className="max-h-[360px] overflow-y-auto">
+            {data.map((m, i) => (
+              <div
+                key={m.id}
+                className={`flex items-center gap-2.5 px-4 py-3 text-[13px] font-inter ${i < data.length - 1 ? "border-b border-black/8" : ""}`}
+              >
+                <div className="flex-1">
+                  <div className="font-semibold text-gym-dark">{m.name}</div>
+                  <div className="text-[11px] text-gray-300 font-mono mt-0.5">{m.id}</div>
+                </div>
+                <span className={`w-26 text-[13px] ${expiresColor(m.status)}`}>{m.expires}</span>
+                <span className="w-22">
+                  <StatusPill variant={m.status === "expiring" ? "expiring" : m.status}>
+                    {m.status === "active" ? "Active" : m.status === "expired" ? "Expired" : "Expiring"}
+                  </StatusPill>
+                </span>
+                <span className="w-20 text-right">
+                  {m.status !== "active" ? (
+                    <button
+                      onClick={() => { setManageCtx({ name: m.name, id: m.id, status: m.status === "expired" ? "expired" : "active" }); setManageOpen(true); }}
+                      className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90"
+                    >
+                      Renew
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setManageCtx({ name: m.name, id: m.id, status: "active" }); setManageOpen(true); }}
+                      className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors"
+                    >
+                      Manage
+                    </button>
+                  )}
+                </span>
               </div>
-              <span className={`w-26 text-[13px] ${expiresColor(m.status)}`}>{m.expires}</span>
-              <span className="w-22">
-                <StatusPill variant={m.status === "expiring" ? "expiring" : m.status}>
-                  {m.status === "active" ? "Active" : m.status === "expired" ? "Expired" : "Expiring"}
-                </StatusPill>
-              </span>
-              <span className="w-20 text-right">
-                {m.status !== "active" ? (
-                  <button
-                    onClick={() => { setManageCtx({ name: m.name, id: m.id, status: m.status === "expired" ? "expired" : "active" }); setManageOpen(true); }}
-                    className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90"
-                  >
-                    Renew
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { setManageCtx({ name: m.name, id: m.id, status: "active" }); setManageOpen(true); }}
-                    className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors"
-                  >
-                    Manage
-                  </button>
-                )}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 

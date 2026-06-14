@@ -66,7 +66,7 @@ function ScanCard({
   return (
     <div className="max-w-[580px] mx-auto">
       <div
-        className="bg-white rounded-[20px] p-7 shadow-[0_2px_16px_rgba(0,0,0,0.06)]"
+        className="bg-white rounded-[20px] p-5 lg:p-7 shadow-[0_2px_16px_rgba(0,0,0,0.06)]"
         style={{ border: `1.5px solid ${borderColor ?? "rgba(0,0,0,0.08)"}` }}
       >
         {children}
@@ -243,13 +243,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">
             Paid records attendance + payment. Unpaid denies access.
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex flex-col lg:flex-row gap-2.5">
             <button onClick={() => recordOutcome("ok", "Payment recorded", "Daily visit · ₱70 · attendance logged")}
               className="flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
               <Check size={16} strokeWidth={2.5} /> Mark paid
             </button>
             <button onClick={() => recordOutcome("deny", "Access denied", "Visit not paid — no attendance recorded")}
-              className="flex items-center gap-2 px-5 py-4 text-[15px] font-bold font-space border border-black/14 rounded-full bg-white text-red-600 cursor-pointer hover:bg-red-50 transition-colors whitespace-nowrap">
+              className="flex items-center justify-center gap-2 px-5 py-4 text-[15px] font-bold font-space border border-black/14 rounded-full bg-white text-red-600 cursor-pointer hover:bg-red-50 transition-colors whitespace-nowrap">
               <XIcon size={16} strokeWidth={2.5} /> Unpaid
             </button>
           </div>
@@ -277,13 +277,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">
             Paid records attendance + payment. Unpaid denies access.
           </div>
-          <div className="flex gap-2.5">
+          <div className="flex flex-col lg:flex-row gap-2.5">
             <button onClick={() => recordOutcome("ok", "Payment recorded", "Guest daily visit · ₱75 · attendance logged")}
               className="flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
               <Check size={16} strokeWidth={2.5} /> Mark paid
             </button>
             <button onClick={() => recordOutcome("deny", "Access denied", "Visit not paid — no attendance recorded")}
-              className="flex items-center gap-2 px-5 py-4 text-[15px] font-bold font-space border border-black/14 rounded-full bg-white text-red-600 cursor-pointer hover:bg-red-50 transition-colors whitespace-nowrap">
+              className="flex items-center justify-center gap-2 px-5 py-4 text-[15px] font-bold font-space border border-black/14 rounded-full bg-white text-red-600 cursor-pointer hover:bg-red-50 transition-colors whitespace-nowrap">
               <XIcon size={16} strokeWidth={2.5} /> Unpaid
             </button>
           </div>
@@ -300,15 +300,17 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <div className="font-space font-bold text-2xl text-green-600 tracking-tight mb-1">Access granted</div>
             <div className="text-sm text-gray-400 font-inter">Attendance recorded automatically</div>
           </div>
-          <div className="flex items-center gap-3.5 mb-5">
-            <InitialsAvatar name="Ana Reyes" />
-            <div className="flex-1">
-              <div className="font-space font-bold text-[17px] text-gym-dark">Ana Reyes</div>
-              <div className="text-xs text-gray-400 font-mono mt-0.5">MEM-000001</div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3.5">
+              <InitialsAvatar name="Ana Reyes" />
+              <div className="flex-1">
+                <div className="font-space font-bold text-[17px] text-gym-dark">Ana Reyes</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">MEM-000001</div>
+              </div>
             </div>
-            <div className="text-right">
+            <div className="text-left lg:text-right">
               <StatusPill variant="active" size="md">Monthly · active</StatusPill>
-              <div className="text-xs text-gray-400 font-inter mt-1.5">expires 9 Jul 2026</div>
+              <div className="text-xs text-gray-400 font-inter mt-1">expires 9 Jul 2026</div>
             </div>
           </div>
           <button onClick={() => go("ready")}

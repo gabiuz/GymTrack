@@ -42,10 +42,10 @@ export function MembersView({ onToast }: MembersViewProps) {
 
   return (
     <>
-      <div className="bg-white border border-black/8 rounded-xl flex overflow-hidden min-h-[520px] shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
+      <div className="bg-white border border-black/8 rounded-xl flex flex-col lg:flex-row overflow-hidden min-h-[520px] shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
 
         {/* List panel */}
-        <div className="w-56 border-r border-black/8 p-3.5 shrink-0 flex flex-col">
+        <div className="w-full lg:w-56 border-b lg:border-b-0 lg:border-r border-black/8 p-3.5 shrink-0 flex flex-col">
           <div className="flex items-center justify-between mb-3">
             <span className="font-space font-bold text-sm text-gym-dark">Members</span>
             <button onClick={() => setAddOpen(true)}
@@ -63,7 +63,7 @@ export function MembersView({ onToast }: MembersViewProps) {
               className="w-full bg-gray-50 border border-black/8 rounded-lg py-2 pl-7.5 pr-2 text-[13px] text-gym-dark font-inter outline-none focus:border-gym-lime transition-colors box-border"
             />
           </div>
-          <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[380px]">
+          <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[240px] lg:max-h-[380px]">
             {filtered.map((m) => {
               const active = selectedId === m.id;
               const variant = m.status === "active" ? "active" : m.status === "expired" ? "expired" : "unassigned";
@@ -89,7 +89,7 @@ export function MembersView({ onToast }: MembersViewProps) {
         </div>
 
         {/* Detail panel */}
-        <div className="flex-1 p-5.5 min-w-0">
+        <div className="flex-1 p-4 lg:p-5.5 min-w-0">
           <div className="flex items-center gap-3.5 mb-5">
             <div className="w-[54px] h-[54px] rounded-full bg-gray-100 flex items-center justify-center text-gray-300">
               <User size={24} />
@@ -116,14 +116,14 @@ export function MembersView({ onToast }: MembersViewProps) {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
               <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Contact</div>
               <KV label="Phone"     value={member.phone} />
               <KV label="Address"   value={member.address} />
               <KV label="Emergency" value={member.emergency.split("·")[0].trim()} last />
             </div>
-            <div>
+            <div className="mt-4 lg:mt-0">
               <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Membership</div>
               <KV label="Annual"     value={member.memberships.annual} />
               <KV label="Monthly"    value={member.memberships.monthly} />

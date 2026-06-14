@@ -65,7 +65,7 @@ export function AddMemberModal({ open, onClose, onConfirm }: AddMemberModalProps
             value={form.name}
             onChange={(v) => setForm((f) => ({ ...f, name: v }))}
           />
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <Field
               label="Contact"
               placeholder="09XX XXX XXXX"
