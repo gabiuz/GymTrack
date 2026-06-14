@@ -20,7 +20,6 @@ const CreateMemberSchema = z.object({
     .optional()
     .nullable(),
   emergencyContact: z.string().max(200).optional().nullable(),
-  // Must be a real HTTPS URL (Cloudinary) or absent — NOT a base64 string
   photoUrl: z
     .string()
     .url('photoUrl must be a valid URL')
@@ -102,7 +101,6 @@ export async function POST(req: NextRequest) {
     const { fullName, contactNumber, address, gender, dateOfBirth, emergencyContact, photoUrl } =
       parsed.data
 
-    // ── Validate dateOfBirth is a real calendar date
     if (dateOfBirth && isNaN(new Date(dateOfBirth).getTime())) {
       return NextResponse.json(
         { error: 'Invalid dateOfBirth — expected YYYY-MM-DD' },
@@ -150,7 +148,6 @@ export async function POST(req: NextRequest) {
       return member
     })
 
-    // ── Sign JWT and set session cookie so user is logged in immediately
     const token = await signToken({
       sub: result.memberId,
       memberId: result.memberId,
