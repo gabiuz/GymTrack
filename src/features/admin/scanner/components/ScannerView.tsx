@@ -8,7 +8,6 @@ import {
   Search,
   CheckCircle,
   AlertTriangle,
-  FlaskConical,
   Check,
   X as XIcon,
 } from "lucide-react";
@@ -75,14 +74,7 @@ function ScanCard({
   );
 }
 
-const DEMO_STATES: [ScanState, string][] = [
-  ["res-a", "Unassigned"],
-  ["res-b", "Daily · member"],
-  ["res-c", "Active plan"],
-  ["res-d", "Expired"],
-  ["res-guest", "Daily · guest"],
-  ["res-invalid", "Invalid QR"],
-];
+
 
 export function ScannerView({ onToast }: ScannerViewProps) {
   const [state, setState] = useState<ScanState>("ready");
@@ -193,19 +185,6 @@ export function ScannerView({ onToast }: ScannerViewProps) {
                 <Search size={13} /> Look up
               </button>
             </div>
-          </div>
-
-          {/* Demo bar */}
-          <div className="border border-dashed border-black/14 rounded-[10px] px-3.5 py-2.5 flex items-center gap-2 flex-wrap bg-white">
-            <span className="text-[11px] text-gray-300 font-semibold flex items-center gap-1.5 font-inter">
-              <FlaskConical size={11} /> Demo · simulate a scan:
-            </span>
-            {DEMO_STATES.map(([s, l]) => (
-              <button key={s} onClick={() => go(s)}
-                className="text-[11px] px-3 py-1 rounded-full border border-black/14 bg-gray-50 text-gray-400 cursor-pointer font-medium font-inter hover:bg-gray-100 transition-colors">
-                {l}
-              </button>
-            ))}
           </div>
         </div>
       )}
