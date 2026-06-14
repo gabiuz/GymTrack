@@ -1,8 +1,6 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,56 +11,32 @@ export default function ConfirmForm() {
   const [error, setError] = useState<string | null>(null);
 
   // Form Details State (loaded from sessionStorage)
-  const [fullName, setFullName] = useState("Jedia Nicole"); // Default mock values just in case
-  const [contactNumber, setContactNumber] = useState("09XX XXX XXXX");
-  const [address, setAddress] = useState("Manila");
-  const [gender, setGender] = useState("Female");
+  const [fullName, setFullName] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [gender, setGender] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
 
   // Load from sessionStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedData = sessionStorage.getItem("register_data");
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (parsed.fullName) setFullName(parsed.fullName);
-          if (parsed.contactNumber) setContactNumber(parsed.contactNumber);
-          if (parsed.address) setAddress(parsed.address);
-          if (parsed.gender) setGender(parsed.gender);
-          if (parsed.photoPreview) setPhotoPreview(parsed.photoPreview);
-        } catch (e) {
-          console.error("Failed to parse saved register data on confirm page", e);
-        }
+    if (typeof window === "undefined") return;
+    const savedData = sessionStorage.getItem("register_data");
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.fullName) setFullName(parsed.fullName);
+        if (parsed.contactNumber) setContactNumber(parsed.contactNumber);
+        if (parsed.address) setAddress(parsed.address);
+        if (parsed.gender) setGender(parsed.gender);
+        // Prefer Cloudinary URL, fall back to local preview for display only
+        if (parsed.photoUrl) setPhotoUrl(parsed.photoUrl);
+        if (parsed.photoPreview) setPhotoPreview(parsed.photoPreview);
+      } catch (e) {
+        console.error("Failed to parse saved register data on confirm page", e);
       }
     }
   }, []);
-
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setPhotoPreview(base64String);
-
-        // Update sessionStorage too
-        if (typeof window !== "undefined") {
-          const savedData = sessionStorage.getItem("register_data");
-          const parsed = savedData ? JSON.parse(savedData) : {};
-          parsed.photoPreview = base64String;
-          sessionStorage.setItem("register_data", JSON.stringify(parsed));
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const triggerFileInput = () => {
-    fileInputRef.current?.click();
-  };
 
   const handleConfirm = async () => {
     setIsLoading(true);
@@ -75,15 +49,8 @@ export default function ConfirmForm() {
           : null;
       const parsed = savedData ? JSON.parse(savedData) : {};
 
-      // Parse date of birth from "MM / DD / YYYY" → ISO 8601
-      let dateOfBirth: string | undefined;
-      if (parsed.dob && parsed.dob.trim() !== "") {
-        const parts = parsed.dob.replace(/\s/g, "").split("/");
-        if (parts.length === 3) {
-          const iso = `${parts[2]}-${parts[0].padStart(2, "0")}-${parts[1].padStart(2, "0")}`;
-          if (!isNaN(new Date(iso).getTime())) dateOfBirth = iso;
-        }
-      }
+      // DOB from native date input is already YYYY-MM-DD — use directly
+      const dateOfBirth = parsed.dob && parsed.dob.trim() !== "" ? parsed.dob : undefined;
 
       const res = await fetch("/api/members", {
         method: "POST",
@@ -95,7 +62,8 @@ export default function ConfirmForm() {
           gender: parsed.gender,
           dateOfBirth,
           emergencyContact: parsed.emergencyContact || undefined,
-          photoUrl: parsed.photoPreview || undefined,
+          // Send the Cloudinary URL — the API now rejects base64 strings
+          photoUrl: parsed.photoUrl || undefined,
         }),
       });
 
@@ -106,10 +74,18 @@ export default function ConfirmForm() {
         return;
       }
 
-      // Store the real member ID returned by the API
+      // Store display data for the Done page — cookie was set by the server
       if (typeof window !== "undefined") {
         sessionStorage.setItem("member_id", json.data.memberId);
         sessionStorage.setItem("qr_code", json.data.qrCode ?? "");
+        sessionStorage.setItem(
+          "member_data",
+          JSON.stringify({
+            memberId: json.data.memberId,
+            fullName: json.data.fullName,
+            photoUrl: photoUrl,
+          })
+        );
         sessionStorage.removeItem("register_data");
       }
 
@@ -236,22 +212,6 @@ export default function ConfirmForm() {
               </svg>
             )}
           </div>
-
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handlePhotoUpload}
-            accept="image/*"
-            className="hidden"
-          />
-
-          <button
-            type="button"
-            onClick={triggerFileInput}
-            className="font-inter font-semibold text-[13px] text-gym-dark py-1.5 px-3 hover:bg-[#e2e7f0] rounded-lg transition-colors focus:outline-none"
-          >
-            Change photo
-          </button>
         </div>
 
         {/* Details Table Card */}

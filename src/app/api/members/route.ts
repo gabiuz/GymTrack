@@ -3,6 +3,31 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@/generated/prisma'
 import bcrypt from 'bcryptjs'
 import QRCode from 'qrcode'
+import { z } from 'zod'
+import { signToken, sessionCookieOptions } from '@/lib/auth'
+
+// ─── Validation schema
+const CreateMemberSchema = z.object({
+  fullName: z.string().min(2, 'Full name is too short').max(100),
+  contactNumber: z
+    .string()
+    .regex(/^(09|\+639)\d{9}$/, 'Invalid Philippine mobile number (e.g. 09171234567)'),
+  address: z.string().min(5, 'Address is too short').max(300),
+  gender: z.enum(['Male', 'Female', 'Other']),
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
+    .optional()
+    .nullable(),
+  emergencyContact: z.string().max(200).optional().nullable(),
+  // Must be a real HTTPS URL (Cloudinary) or absent — NOT a base64 string
+  photoUrl: z
+    .string()
+    .url('photoUrl must be a valid URL')
+    .startsWith('https://', 'photoUrl must be an HTTPS URL')
+    .optional()
+    .nullable(),
+})
 
 // ─── Helper: generate next Member ID
 async function generateMemberId(tx: Prisma.TransactionClient): Promise<string> {
@@ -10,12 +35,9 @@ async function generateMemberId(tx: Prisma.TransactionClient): Promise<string> {
     orderBy: { id: 'desc' },
     select: { memberId: true },
   })
-
   if (!latest) return 'MEM-000001'
-
   const lastNumber = parseInt(latest.memberId.replace('MEM-', ''), 10)
-  const nextNumber = lastNumber + 1
-  return `MEM-${String(nextNumber).padStart(6, '0')}`
+  return `MEM-${String(lastNumber + 1).padStart(6, '0')}`
 }
 
 // ─── GET /api/members
@@ -67,36 +89,29 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
 
-    const {
-      fullName,
-      contactNumber,
-      address,
-      gender,
-      dateOfBirth,
-      emergencyContact,
-      photoUrl,
-    } = body
-
-    // ── Validate required fields
-    if (!fullName || !contactNumber || !address || !gender) {
+    // ── Validate with Zod
+    const parsed = CreateMemberSchema.safeParse(body)
+    if (!parsed.success) {
+      const firstError = parsed.error.issues[0]
       return NextResponse.json(
-        { error: 'fullName, contactNumber, address, and gender are required' },
+        { error: firstError.message, field: firstError.path[0] },
         { status: 400 }
       )
     }
 
+    const { fullName, contactNumber, address, gender, dateOfBirth, emergencyContact, photoUrl } =
+      parsed.data
+
+    // ── Validate dateOfBirth is a real calendar date
     if (dateOfBirth && isNaN(new Date(dateOfBirth).getTime())) {
       return NextResponse.json(
-        { error: 'Invalid dateOfBirth — expected an ISO 8601 date string' },
+        { error: 'Invalid dateOfBirth — expected YYYY-MM-DD' },
         { status: 400 }
       )
     }
 
-    // ── Check if contact number already exists
-    const existing = await prisma.member.findUnique({
-      where: { contactNumber },
-    })
-
+    // ── Check for duplicate contact number
+    const existing = await prisma.member.findUnique({ where: { contactNumber } })
     if (existing) {
       return NextResponse.json(
         { error: 'A member with this contact number already exists' },
@@ -105,17 +120,10 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-
-      // 1. Generate Member ID inside the transaction
       const memberId = await generateMemberId(tx)
 
-      // 2. Pre-generate QR code
-      const qrCode = await QRCode.toDataURL(memberId, {
-        width: 300,
-        margin: 2,
-      })
+      const qrCode = await QRCode.toDataURL(memberId, { width: 300, margin: 2 })
 
-      // 3. Create User login account, default pass is contactnum
       const user = await tx.user.create({
         data: {
           name: fullName,
@@ -124,7 +132,6 @@ export async function POST(req: NextRequest) {
         },
       })
 
-      // 4. Create Member profile
       const member = await tx.member.create({
         data: {
           memberId,
@@ -143,7 +150,14 @@ export async function POST(req: NextRequest) {
       return member
     })
 
-    return NextResponse.json(
+    // ── Sign JWT and set session cookie so user is logged in immediately
+    const token = await signToken({
+      sub: result.memberId,
+      memberId: result.memberId,
+      fullName: result.fullName,
+    })
+
+    const res = NextResponse.json(
       {
         message: 'Member registered successfully',
         data: {
@@ -157,6 +171,8 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     )
 
+    res.cookies.set(sessionCookieOptions(token))
+    return res
   } catch (error) {
     console.error('[POST /api/members]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

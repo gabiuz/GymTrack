@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -39,7 +39,7 @@ export default function LoginForm() {
         return;
       }
 
-      // Store member session data
+      // Store only safe display data — auth is handled by the server cookie
       if (typeof window !== "undefined") {
         sessionStorage.setItem("member_id", json.data.memberId);
         sessionStorage.setItem("qr_code", json.data.qrCode ?? "");
@@ -48,8 +48,6 @@ export default function LoginForm() {
           JSON.stringify({
             memberId: json.data.memberId,
             fullName: json.data.fullName,
-            contactNumber: json.data.contactNumber,
-            gender: json.data.gender,
             photoUrl: json.data.photoUrl,
           })
         );

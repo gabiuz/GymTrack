@@ -1,8 +1,6 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function DoneForm() {

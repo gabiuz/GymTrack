@@ -1,8 +1,6 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -70,28 +68,44 @@ export default function MyPassForm() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  // Load member info
+  // Load member info — fetch from API (uses session cookie), fall back to sessionStorage cache
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Primary: data saved by the login API response
-    const memberDataRaw = sessionStorage.getItem("member_data");
-    if (memberDataRaw) {
-      try {
-        const parsed = JSON.parse(memberDataRaw);
-        if (parsed.fullName) setFullName(parsed.fullName);
-        if (parsed.photoUrl) setPhotoPreview(parsed.photoUrl);
-      } catch (e) {
-        console.error("Failed to parse member_data on my-pass page", e);
-      }
-    }
-
-    // member_id and qr_code are set by both login and registration flows
-    const savedMemberId = sessionStorage.getItem("member_id");
-    if (savedMemberId) setMemberId(savedMemberId);
-
-    const savedQrCode = sessionStorage.getItem("qr_code");
-    if (savedQrCode) setQrCode(savedQrCode);
+    // Try to load from /api/auth/me first (authoritative)
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.data) {
+          const m = json.data;
+          if (m.fullName) setFullName(m.fullName);
+          if (m.memberId) setMemberId(m.memberId);
+          if (m.photoUrl) setPhotoPreview(m.photoUrl);
+          if (m.qrCode) setQrCode(m.qrCode);
+          // Refresh sessionStorage cache
+          sessionStorage.setItem("member_id", m.memberId);
+          sessionStorage.setItem("qr_code", m.qrCode ?? "");
+          sessionStorage.setItem(
+            "member_data",
+            JSON.stringify({ memberId: m.memberId, fullName: m.fullName, photoUrl: m.photoUrl })
+          );
+        }
+      })
+      .catch(() => {
+        // Offline or error — use cached sessionStorage data
+        const memberDataRaw = sessionStorage.getItem("member_data");
+        if (memberDataRaw) {
+          try {
+            const parsed = JSON.parse(memberDataRaw);
+            if (parsed.fullName) setFullName(parsed.fullName);
+            if (parsed.photoUrl) setPhotoPreview(parsed.photoUrl);
+          } catch { /* ignore */ }
+        }
+        const savedMemberId = sessionStorage.getItem("member_id");
+        if (savedMemberId) setMemberId(savedMemberId);
+        const savedQrCode = sessionStorage.getItem("qr_code");
+        if (savedQrCode) setQrCode(savedQrCode);
+      });
   }, []);
 
   // Client-side QR download logic
