@@ -1,35 +1,40 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 type MemberState = "unassigned" | "guest" | "assigned";
 
 export default function MembershipStatusForm() {
-  const [fullName, setFullName] = useState("Jedia Nicole");
-  const [memberId, setMemberId] = useState("MEM-000001");
+  const [fullName, setFullName] = useState("");
+  const [memberId, setMemberId] = useState("");
   const [memberState, setMemberState] = useState<MemberState>("unassigned");
 
-  // Load registered user info
+  // Load member info — fetch from API (uses session cookie), fall back to sessionStorage cache
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedData = sessionStorage.getItem("register_data");
-      if (savedData) {
-        try {
-          const parsed = JSON.parse(savedData);
-          if (parsed.fullName) setFullName(parsed.fullName);
-        } catch (e) {
-          console.error("Failed to parse register_data on membership status page", e);
-        }
-      }
+    if (typeof window === "undefined") return;
 
-      const savedMemberId = sessionStorage.getItem("member_id");
-      if (savedMemberId) {
-        setMemberId(savedMemberId);
-      }
-    }
+    fetch("/api/auth/me")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.data) {
+          const m = json.data;
+          if (m.fullName) setFullName(m.fullName);
+          if (m.memberId) setMemberId(m.memberId);
+        }
+      })
+      .catch(() => {
+        // Offline fallback — read from sessionStorage cache
+        const memberDataRaw = sessionStorage.getItem("member_data");
+        if (memberDataRaw) {
+          try {
+            const parsed = JSON.parse(memberDataRaw);
+            if (parsed.fullName) setFullName(parsed.fullName);
+          } catch { /* ignore */ }
+        }
+        const savedMemberId = sessionStorage.getItem("member_id");
+        if (savedMemberId) setMemberId(savedMemberId);
+      });
   }, []);
 
   // Format today's date dynamically (e.g. 12 Jun 2026)
@@ -702,44 +707,6 @@ export default function MembershipStatusForm() {
             </Link>
           </div>
         )}
-
-        {/* Demo State Switcher Selector */}
-        <div className="border-t border-gray-200 border-dashed pt-6 mt-6 flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <span className="font-inter font-bold text-xs leading-tight text-gym-gray/60 tracking-wider uppercase">
-              Demo &middot; member state
-            </span>
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setMemberState("unassigned")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer ${memberState === "unassigned"
-                  ? "bg-gym-dark text-gym-gray-bg border border-gym-dark shadow-xs"
-                  : "bg-white text-gym-gray border border-gray-200 hover:bg-gray-100"
-                  }`}
-              >
-                Unassigned
-              </button>
-              <button
-                onClick={() => setMemberState("assigned")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer ${memberState === "assigned"
-                  ? "bg-gym-dark text-gym-gray-bg border border-gym-dark shadow-xs"
-                  : "bg-white text-gym-gray border border-gray-200 hover:bg-gray-100"
-                  }`}
-              >
-                Active
-              </button>
-              <button
-                onClick={() => setMemberState("guest")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all focus:outline-none cursor-pointer ${memberState === "guest"
-                  ? "bg-gym-dark text-gym-gray-bg border border-gym-dark shadow-xs"
-                  : "bg-white text-gym-gray border border-gray-200 hover:bg-gray-100"
-                  }`}
-              >
-                Daily Guest
-              </button>
-            </div>
-          </div>
-        </div>
 
       </div>
     </div>

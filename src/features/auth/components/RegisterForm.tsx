@@ -1,8 +1,6 @@
 "use client";
 
-/* eslint-disable react-hooks/set-state-in-effect */
-
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -17,6 +15,8 @@ export default function RegisterForm() {
   const [dob, setDob] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -47,14 +47,33 @@ export default function RegisterForm() {
     contactNumber.trim() !== "" &&
     address.trim() !== "";
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+
+    // Upload to Cloudinary in the background
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const json = await res.json();
+      if (res.ok && json.url) {
+        setPhotoUrl(json.url);
+      } else {
+        console.error("Photo upload failed:", json.error);
+        setPhotoUrl(null);
+      }
+    } catch (err) {
+      console.error("Photo upload error:", err);
+      setPhotoUrl(null);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -73,11 +92,12 @@ export default function RegisterForm() {
           gender,
           dob,
           emergencyContact,
+          // Store Cloudinary URL (preferred) or local preview as fallback
+          photoUrl,
           photoPreview,
         };
         sessionStorage.setItem("register_data", JSON.stringify(data));
       }
-      // Navigate to step 2: confirm page
       router.push("/confirm");
     }
   };
@@ -255,10 +275,10 @@ export default function RegisterForm() {
               </label>
               <input
                 id="dob"
-                type="text"
+                type="date"
                 value={dob}
                 onChange={(e) => setDob(e.target.value)}
-                placeholder="MM / DD / YYYY"
+                max={new Date().toISOString().split("T")[0]}
                 className="bg-white border border-[#e2e7f0] focus:border-gym-lime focus:ring-1 focus:ring-gym-lime focus:outline-none rounded-xl h-11.5 px-3.5 py-3 font-inter font-normal text-sm text-gym-dark placeholder-gym-dark/50 transition-all"
               />
             </div>
@@ -305,7 +325,8 @@ export default function RegisterForm() {
               <button
                 type="button"
                 onClick={triggerFileInput}
-                className="w-full bg-white border border-[#e2e7f0] border-dashed rounded-xl min-h-13.5 p-4 flex gap-2.5 items-center justify-center hover:border-gym-lime/40 transition-colors focus:outline-none overflow-hidden"
+                disabled={isUploading}
+                className="w-full bg-white border border-[#e2e7f0] border-dashed rounded-xl min-h-13.5 p-4 flex gap-2.5 items-center justify-center hover:border-gym-lime/40 transition-colors focus:outline-none overflow-hidden disabled:opacity-60"
               >
                 {photoPreview ? (
                   <div className="relative w-12 h-12 rounded-full overflow-hidden border border-[#e2e7f0] flex items-center justify-center animate-in fade-in duration-200">
@@ -336,7 +357,7 @@ export default function RegisterForm() {
                 )}
 
                 <span className="font-inter font-medium text-sm text-[#9aa2b1] tracking-tight">
-                  {photoPreview ? "Change photo" : "Tap to upload"}
+                  {isUploading ? "Uploading…" : photoPreview ? "Change photo" : "Tap to upload"}
                 </span>
               </button>
             </div>

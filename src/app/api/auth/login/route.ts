@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { signToken, sessionCookieOptions } from '@/lib/auth'
 
 // ─── POST /api/auth/login
 export async function POST(req: NextRequest) {
@@ -23,25 +24,16 @@ export async function POST(req: NextRequest) {
           { contactNumber: identifier },
         ],
       },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     })
 
     if (!member || !member.user) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
     const passwordMatch = await bcrypt.compare(password, member.user.password)
-
     if (!passwordMatch) {
-      return NextResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
 
     if (!member.user.isActive) {
@@ -51,17 +43,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    return NextResponse.json({
+    // ── Sign JWT and set HTTP-only session cookie
+    const token = await signToken({
+      sub: member.memberId,
+      memberId: member.memberId,
+      fullName: member.fullName,
+    })
+
+    const res = NextResponse.json({
       message: 'Login successful',
       data: {
         memberId: member.memberId,
         fullName: member.fullName,
-        contactNumber: member.contactNumber,
-        gender: member.gender,
         photoUrl: member.photoUrl,
         qrCode: member.qrCode,
       },
     })
+
+    res.cookies.set(sessionCookieOptions(token))
+    return res
   } catch (error) {
     console.error('[POST /api/auth/login]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
