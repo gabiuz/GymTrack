@@ -9,10 +9,10 @@ import { QRModal } from "./QRModal";
 import { ManageMembershipModal } from "./ManageMembershipModal";
 
 const MEMBERS = [
-  { id: "MEM-000001", name: "Ana Reyes",   status: "active"     as const, joined: "12 Jan 2026", phone: "0917 123 4567", address: "12 Mabini St., Pasig",   birth: "04/12/2001", emergency: "Maria R. · 0917 765 4321", memberships: { annual: "exp 12 Jan 27", monthly: "exp 9 Jul 26",  daily: "₱70" } },
-  { id: "MEM-000008", name: "Mark Cruz",   status: "active"     as const, joined: "5 Mar 2026",  phone: "0918 234 5678", address: "45 Rizal Ave., Makati",   birth: "11/03/1998", emergency: "Pedro C. · 0918 876 5432", memberships: { annual: "exp 5 Mar 27",  monthly: "exp 14 Jun 26", daily: "₱70" } },
+  { id: "MEM-000001", name: "Ana Reyes",   status: "active"     as const, joined: "12 Jan 2026", phone: "0917 123 4567", address: "12 Mabini St., Pasig",   birth: "04/12/2001", emergency: "Maria R. · 0917 765 4321", memberships: { annual: "12/01/2027", monthly: "09/07/2026",  daily: "₱70" } },
+  { id: "MEM-000008", name: "Mark Cruz",   status: "active"     as const, joined: "5 Mar 2026",  phone: "0918 234 5678", address: "45 Rizal Ave., Makati",   birth: "11/03/1998", emergency: "Pedro C. · 0918 876 5432", memberships: { annual: "05/03/2027",  monthly: "14/06/2026", daily: "₱70" } },
   { id: "MEM-000014", name: "Liza Tan",    status: "unassigned" as const, joined: "2 Jun 2026",  phone: "0919 345 6789", address: "7 Quezon Blvd., QC",     birth: "08/22/2003", emergency: "Tony T. · 0919 654 3210",  memberships: { annual: "—",            monthly: "—",              daily: "₱75" } },
-  { id: "MEM-000023", name: "Jose Santos", status: "expired"    as const, joined: "15 Dec 2025", phone: "0920 456 7890", address: "22 Balagtas St., Pasay", birth: "03/15/1990", emergency: "Carmen S. · 0920 543 2109", memberships: { annual: "exp 1 Jun 26",  monthly: "expired 1 Jun 26", daily: "₱70" } },
+  { id: "MEM-000023", name: "Jose Santos", status: "expired"    as const, joined: "15 Dec 2025", phone: "0920 456 7890", address: "22 Balagtas St., Pasay", birth: "03/15/1990", emergency: "Carmen S. · 0920 543 2109", memberships: { annual: "01/06/2026",  monthly: "01/06/2026", daily: "₱70" } },
 ];
 
 interface MembersViewProps { onToast: (title: string, sub: string) => void; }
@@ -139,7 +139,7 @@ export function MembersView({ onToast }: MembersViewProps) {
             </div>
             <div className="flex justify-between px-3.5 py-2.5 text-[13px] text-gym-dark font-inter">
               <span>Payment · Monthly</span>
-              <span className="text-gray-400">9 Jun · ₱799</span>
+              <span className="text-gray-400">Jun 9 · ₱799</span>
             </div>
           </div>
         </div>

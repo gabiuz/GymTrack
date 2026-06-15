@@ -14,10 +14,10 @@ const rangeData: Record<Range, {
   "today": {
     stats: { today: "24", total: "24", peak: "4–5 PM" },
     chart: [
-      { hour: "8a", count: 3 }, { hour: "9a", count: 5 }, { hour: "10a", count: 9 },
-      { hour: "11a", count: 7 }, { hour: "12p", count: 4 }, { hour: "1p", count: 6 },
-      { hour: "2p", count: 8 }, { hour: "3p", count: 11 }, { hour: "4p", count: 14 },
-      { hour: "5p", count: 10 }, { hour: "6p", count: 6 },
+      { hour: "8 AM", count: 3 }, { hour: "9 AM", count: 5 }, { hour: "10 AM", count: 9 },
+      { hour: "11 AM", count: 7 }, { hour: "12 PM", count: 4 }, { hour: "1 PM", count: 6 },
+      { hour: "2 PM", count: 8 }, { hour: "3 PM", count: 11 }, { hour: "4 PM", count: 14 },
+      { hour: "5 PM", count: 10 }, { hour: "6 PM", count: 6 },
     ],
     checkins: [
       { member: "Ana Reyes",   id: "MEM-000001", type: "Monthly plan",   time: "7:42 AM", date: "Today" },
@@ -31,10 +31,10 @@ const rangeData: Record<Range, {
   "3d": {
     stats: { today: "24", total: "71", peak: "6–7 PM" },
     chart: [
-      { hour: "8a", count: 3 }, { hour: "9a", count: 5 }, { hour: "10a", count: 9 },
-      { hour: "11a", count: 7 }, { hour: "12p", count: 4 }, { hour: "1p", count: 6 },
-      { hour: "2p", count: 8 }, { hour: "3p", count: 11 }, { hour: "4p", count: 14 },
-      { hour: "5p", count: 10 }, { hour: "6p", count: 6 },
+      { hour: "8 AM", count: 3 }, { hour: "9 AM", count: 5 }, { hour: "10 AM", count: 9 },
+      { hour: "11 AM", count: 7 }, { hour: "12 PM", count: 4 }, { hour: "1 PM", count: 6 },
+      { hour: "2 PM", count: 8 }, { hour: "3 PM", count: 11 }, { hour: "4 PM", count: 14 },
+      { hour: "5 PM", count: 10 }, { hour: "6 PM", count: 6 },
     ],
     checkins: [
       { member: "Ana Reyes",   id: "MEM-000001", type: "Monthly plan",   time: "7:42 AM", date: "Today" },
