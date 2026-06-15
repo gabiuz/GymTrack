@@ -59,9 +59,16 @@ export default function AdminLoginPage() {
           </div>
           <Link
             href="/admin/scanner"
-            className="block w-full py-3 text-[15px] font-bold font-space tracking-tight text-center rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity"
+            className="flex items-center justify-center gap-2 w-full py-3 text-[15px] font-bold font-space tracking-tight rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity"
           >
-            Sign in →
+            <span>Sign in</span>
+            <Image
+              src="/icons/arrow-right.svg"
+              alt="Arrow Right"
+              width={16}
+              height={16}
+              className="object-contain"
+            />
           </Link>
         </div>
 

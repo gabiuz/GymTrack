@@ -5,15 +5,15 @@ import { StatusPill } from "@/features/admin/_ui";
 import { ManageMembershipModal } from "@/features/admin/members/components/ManageMembershipModal";
 
 const annualMembers = [
-  { id: "MEM-000023", name: "Jose Santos", expires: "1 Jun 2026",  status: "expired"  as const },
-  { id: "MEM-000008", name: "Mark Cruz",   expires: "14 Jun 2026", status: "expiring" as const },
-  { id: "MEM-000001", name: "Ana Reyes",   expires: "12 Jan 2027", status: "active"   as const },
-  { id: "MEM-000044", name: "Grace Uy",    expires: "3 Sep 2026",  status: "active"   as const },
+  { id: "MEM-000023", name: "Jose Santos", expires: "01/06/2026",  status: "expired"  as const },
+  { id: "MEM-000008", name: "Mark Cruz",   expires: "14/06/2026", status: "expiring" as const },
+  { id: "MEM-000001", name: "Ana Reyes",   expires: "12/01/2027", status: "active"   as const },
+  { id: "MEM-000044", name: "Grace Uy",    expires: "03/09/2026",  status: "active"   as const },
 ];
 const monthlyMembers = [
-  { id: "MEM-000001", name: "Ana Reyes", expires: "9 Jul 2026",  status: "active"   as const },
-  { id: "MEM-000008", name: "Mark Cruz", expires: "14 Jun 2026", status: "expiring" as const },
-  { id: "MEM-000003", name: "Pedro Lim", expires: "30 Jun 2026", status: "active"   as const },
+  { id: "MEM-000001", name: "Ana Reyes", expires: "09/07/2026",  status: "active"   as const },
+  { id: "MEM-000008", name: "Mark Cruz", expires: "14/06/2026", status: "expiring" as const },
+  { id: "MEM-000003", name: "Pedro Lim", expires: "30/06/2026", status: "active"   as const },
 ];
 
 type Tab = "annual" | "monthly";
