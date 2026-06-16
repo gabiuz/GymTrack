@@ -139,7 +139,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ─── POST /api/members
+// ─── POST /api/members  (public — customer self-registration)
 export async function POST(req: NextRequest) {
   try {
     const postSession = await requireStaffOrOwner(req)

@@ -77,17 +77,17 @@ export default function LoginForm() {
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="flex flex-col mt-4 w-full">
-          {/* Field 1: Member ID or Contact */}
+          {/* Field 1: Member ID, full name, or contact */}
           <div className="flex flex-col gap-2">
-            <label htmlFor="memberId" className="font-inter font-semibold text-xs tracking-[-0.08px] text-gym-dark">
-              Member ID or contact number
+            <label htmlFor="identifier" className="font-inter font-semibold text-xs tracking-[-0.08px] text-gym-dark">
+              Member ID or full name
             </label>
             <input
-              id="memberId"
+              id="identifier"
               type="text"
               value={memberId}
               onChange={(e) => setMemberId(e.target.value)}
-              placeholder="MEM-000001 or 09XX XXX XXXX"
+              placeholder="MEM-000001 or Juan dela Cruz"
               className="bg-white border border-[#e2e7f0] focus:border-gym-lime focus:ring-1 focus:ring-gym-lime focus:outline-none rounded-2xl h-12.5 px-4 py-3 font-inter font-normal text-sm text-gym-dark placeholder-gym-dark/50 tracking-[-0.23px] transition-all"
               required
             />

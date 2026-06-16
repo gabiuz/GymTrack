@@ -16,12 +16,12 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Find member by memberId OR contactNumber
+    // Find member by memberId, OR full name (case-insensitive)
     const member = await prisma.member.findFirst({
       where: {
         OR: [
           { memberId: identifier },
-          { contactNumber: identifier },
+          { fullName: { equals: identifier, mode: 'insensitive' } },
         ],
       },
       include: { user: true },
