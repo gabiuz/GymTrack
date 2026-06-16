@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Search, Plus, BadgeCheck, QrCode, Pencil, User } from "lucide-react";
 import { StatusPill } from "@/features/admin/_ui";
 import { AddMemberModal } from "./AddMemberModal";
@@ -33,16 +33,73 @@ interface MemberDetail extends MemberRow {
 interface MembersViewProps { onToast: (title: string, sub: string) => void; }
 
 export function MembersView({ onToast }: MembersViewProps) {
-  const [search, setSearch]           = useState("");
-  const [members, setMembers]         = useState<MemberRow[]>([]);
-  const [loading, setLoading]         = useState(true);
-  const [selectedId, setSelectedId]   = useState<number | null>(null);
-  const [detail, setDetail]           = useState<MemberDetail | null>(null);
+  const [search, setSearch] = useState("");
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detail, setDetail] = useState<MemberDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [addOpen, setAddOpen]         = useState(false);
-  const [editOpen, setEditOpen]       = useState(false);
-  const [qrOpen, setQrOpen]           = useState(false);
-  const [manageOpen, setManageOpen]   = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+
+  const [listWidth, setListWidth] = useState(320);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, w: 0 });
+
+  useEffect(() => {
+    const saved = localStorage.getItem("gymtrack:admin-members-list-width");
+    if (saved) {
+      const val = parseInt(saved, 10);
+      if (!isNaN(val) && val >= 200 && val <= 600) {
+        setListWidth(val);
+      }
+    }
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    dragStart.current = { x: e.clientX, w: listWidth };
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaX = e.clientX - dragStart.current.x;
+      const newWidth = dragStart.current.w + deltaX;
+      const clamped = Math.max(200, Math.min(600, newWidth));
+      setListWidth(clamped);
+      localStorage.setItem("gymtrack:admin-members-list-width", String(clamped));
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    } else {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    }
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isDragging]);
 
   const fetchMembers = useCallback(() => {
     setLoading(true);
@@ -74,12 +131,12 @@ export function MembersView({ onToast }: MembersViewProps) {
     ? detail.hasActiveMonthlyPlan || detail.hasActiveMembership
       ? "active"
       : detail.latestMembership
-      ? "expired"
-      : "unassigned"
+        ? "expired"
+        : "unassigned"
     : "unassigned";
 
   const pillVariant = memberStatus === "active" ? "active" : memberStatus === "expired" ? "expired" : "unassigned";
-  const pillLabel   = memberStatus === "active" ? "Active" : memberStatus === "expired" ? "Expired" : "Unassigned";
+  const pillLabel = memberStatus === "active" ? "Active" : memberStatus === "expired" ? "Expired" : "Unassigned";
 
   const KV = ({ label, value, last = false }: { label: string; value: string; last?: boolean }) => (
     <div className={`flex justify-between items-start text-[13px] py-2 font-inter ${last ? "" : "border-b border-black/8"}`}>
@@ -93,7 +150,10 @@ export function MembersView({ onToast }: MembersViewProps) {
       <div className="bg-white border border-black/8 rounded-xl flex flex-col lg:flex-row overflow-hidden min-h-[520px] shadow-[0_1px_4px_rgba(0,0,0,0.06)]">
 
         {/* List panel */}
-        <div className="w-full lg:w-56 border-b lg:border-b-0 lg:border-r border-black/8 p-3.5 shrink-0 flex flex-col">
+        <div
+          className="w-full lg:w-[var(--list-width)] relative border-b lg:border-b-0 lg:border-r border-black/8 p-3.5 shrink-0 flex flex-col"
+          style={{ "--list-width": `${listWidth}px` } as React.CSSProperties}
+        >
           <div className="flex items-center justify-between mb-3">
             <span className="font-space font-bold text-sm text-gym-dark">Members</span>
             <button onClick={() => setAddOpen(true)}
@@ -137,6 +197,14 @@ export function MembersView({ onToast }: MembersViewProps) {
                 </div>
               );
             })}
+          </div>
+
+          {/* Resize handle */}
+          <div
+            onMouseDown={handleMouseDown}
+            className="hidden lg:block absolute top-0 bottom-0 right-[-3px] w-[6px] cursor-col-resize z-50 group select-none"
+          >
+            <div className="w-[2px] h-full mx-auto bg-transparent group-hover:bg-gym-lime group-active:bg-gym-lime/80 transition-colors" />
           </div>
         </div>
 
@@ -182,15 +250,15 @@ export function MembersView({ onToast }: MembersViewProps) {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div>
                   <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Contact</div>
-                  <KV label="Phone"     value={detail.contactNumber} />
-                  <KV label="Address"   value={detail.address} />
+                  <KV label="Phone" value={detail.contactNumber} />
+                  <KV label="Address" value={detail.address} />
                   <KV label="Emergency" value={detail.emergencyContact ?? "—"} last />
                 </div>
                 <div className="mt-4 lg:mt-0">
                   <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Membership</div>
-                  <KV label="Annual expires"  value={detail.latestMembership ? new Date(detail.latestMembership.endDate).toLocaleDateString("en-PH") : "—"} />
+                  <KV label="Annual expires" value={detail.latestMembership ? new Date(detail.latestMembership.endDate).toLocaleDateString("en-PH") : "—"} />
                   <KV label="Monthly expires" value={detail.latestMonthlyPlan ? new Date(detail.latestMonthlyPlan.endDate).toLocaleDateString("en-PH") : "—"} />
-                  <KV label="Daily rate"      value={detail.hasActiveMembership ? "₱70" : "₱75"} last />
+                  <KV label="Daily rate" value={detail.hasActiveMembership ? "₱70" : "₱75"} last />
                 </div>
               </div>
             </>
