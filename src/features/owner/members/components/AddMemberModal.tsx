@@ -14,11 +14,13 @@ function Field({
   placeholder,
   value,
   onChange,
+  maxLength,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
+  maxLength?: number;
 }) {
   return (
     <div className="mb-3.5">
@@ -30,6 +32,7 @@ function Field({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        maxLength={maxLength}
         className="w-full bg-gray-50 border border-black/14 rounded-lg px-3 py-2.5 text-[13px] text-gym-dark font-inter outline-none focus:border-gym-lime transition-colors box-border"
       />
     </div>
@@ -97,6 +100,7 @@ export function AddMemberModal({ open, onClose, onConfirm }: AddMemberModalProps
               placeholder="09XX XXX XXXX"
               value={form.contact}
               onChange={(v) => setForm((f) => ({ ...f, contact: v }))}
+              maxLength={11}
             />
             <div className="mb-3.5">
               <label className="block text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-1.5 font-inter">Gender</label>

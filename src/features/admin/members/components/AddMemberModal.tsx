@@ -15,12 +15,14 @@ function Field({
   value,
   onChange,
   required,
+  maxLength,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
+  maxLength?: number;
 }) {
   return (
     <div className="mb-3.5">
@@ -33,6 +35,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
+        maxLength={maxLength}
         className="w-full bg-gray-50 border border-black/14 rounded-lg px-3 py-2.5 text-[13px] text-gym-dark font-inter outline-none focus:border-gym-lime transition-colors box-border"
       />
     </div>
@@ -94,7 +97,7 @@ export function AddMemberModal({ open, onClose, onConfirm }: AddMemberModalProps
         <div className="px-5 py-4.5">
           <Field label="Full name" placeholder="Juan dela Cruz" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} required />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <Field label="Contact" placeholder="09XX XXX XXXX" value={form.contact} onChange={(v) => setForm((f) => ({ ...f, contact: v }))} required />
+            <Field label="Contact" placeholder="09XX XXX XXXX" value={form.contact} onChange={(v) => setForm((f) => ({ ...f, contact: v }))} required maxLength={11} />
             <div className="mb-3.5">
               <label className="block text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-1.5 font-inter">Gender</label>
               <select

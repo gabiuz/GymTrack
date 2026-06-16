@@ -4,69 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-// Static QR Code placeholder (to be replaced by backend-generated QR code in production)
-const QrCodePlaceholder = () => {
-  return (
-    <svg id="mypass-qrcode-svg" viewBox="0 0 100 100" className="w-full h-full text-gym-dark" fill="currentColor">
-      <rect width="100" height="100" fill="#ffffff" />
-
-      {/* Finder pattern Top-Left */}
-      <rect x="0" y="0" width="28" height="28" rx="2" />
-      <rect x="4" y="4" width="20" height="20" fill="#ffffff" rx="1" />
-      <rect x="8" y="8" width="12" height="12" rx="0.5" />
-
-      {/* Finder pattern Top-Right */}
-      <rect x="72" y="0" width="28" height="28" rx="2" />
-      <rect x="76" y="4" width="20" height="20" fill="#ffffff" rx="1" />
-      <rect x="80" y="8" width="12" height="12" rx="0.5" />
-
-      {/* Finder pattern Bottom-Left */}
-      <rect x="0" y="72" width="28" height="28" rx="2" />
-      <rect x="4" y="76" width="20" height="20" fill="#ffffff" rx="1" />
-      <rect x="8" y="80" width="12" height="12" rx="0.5" />
-
-      {/* Mock details / random pixel blocks */}
-      <rect x="36" y="0" width="8" height="8" />
-      <rect x="48" y="4" width="12" height="8" />
-      <rect x="36" y="16" width="24" height="4" />
-      <rect x="44" y="24" width="8" height="8" />
-      <rect x="64" y="12" width="4" height="12" />
-
-      <rect x="0" y="36" width="8" height="8" />
-      <rect x="16" y="36" width="12" height="12" />
-      <rect x="4" y="52" width="16" height="4" />
-      <rect x="0" y="60" width="8" height="8" />
-
-      <rect x="36" y="36" width="16" height="16" />
-      <rect x="40" y="40" width="8" height="8" fill="#ffffff" />
-      <rect x="56" y="36" width="8" height="8" />
-      <rect x="68" y="36" width="12" height="4" />
-
-      <rect x="36" y="56" width="8" height="12" />
-      <rect x="48" y="60" width="16" height="8" />
-      <rect x="68" y="48" width="8" height="16" />
-      <rect x="80" y="36" width="8" height="16" />
-      <rect x="92" y="44" width="8" height="8" />
-
-      <rect x="36" y="76" width="12" height="8" />
-      <rect x="36" y="88" width="20" height="12" />
-      <rect x="60" y="76" width="8" height="16" />
-      <rect x="52" y="80" width="4" height="4" />
-
-      <rect x="76" y="72" width="8" height="8" />
-      <rect x="88" y="72" width="12" height="12" />
-      <rect x="84" y="88" width="16" height="8" />
-      <rect x="72" y="92" width="8" height="8" />
-    </svg>
-  );
-};
-
 export default function MyPassForm() {
-  const [fullName, setFullName] = useState("");
-  const [memberId, setMemberId] = useState("");
+
+  const [fullName, setFullName]     = useState("");
+  const [memberId, setMemberId]     = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [showModal, setShowModal] = useState(false);
+  const [qrCode, setQrCode]         = useState<string | null>(null);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [showModal, setShowModal]   = useState(false);
 
   // Load member info — fetch from API (uses session cookie), fall back to sessionStorage cache
   useEffect(() => {
@@ -105,55 +50,20 @@ export default function MyPassForm() {
         if (savedMemberId) setMemberId(savedMemberId);
         const savedQrCode = sessionStorage.getItem("qr_code");
         if (savedQrCode) setQrCode(savedQrCode);
-      });
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   // Client-side QR download logic
   const handleDownloadQR = () => {
-    if (qrCode) {
-      const downloadLink = document.createElement("a");
-      downloadLink.href = qrCode;
-      downloadLink.download = `${memberId}-qr.png`;
-      document.body.appendChild(downloadLink);
-      downloadLink.click();
-      document.body.removeChild(downloadLink);
-      setShowModal(true);
-      return;
-    }
-
-    // Fallback: serialize the SVG placeholder to PNG via canvas
-    const svgElement = document.getElementById("mypass-qrcode-svg");
-    if (!svgElement) return;
-
-    const svgString = new XMLSerializer().serializeToString(svgElement);
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const URL = window.URL || window.webkitURL || window;
-    const blobURL = URL.createObjectURL(svgBlob);
-
-    const image = new window.Image();
-    image.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 300;
-      canvas.height = 300;
-      const context = canvas.getContext("2d");
-      if (context) {
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, 300, 300);
-        context.drawImage(image, 15, 15, 270, 270);
-
-        const pngURL = canvas.toDataURL("image/png");
-        const downloadLink = document.createElement("a");
-        downloadLink.href = pngURL;
-        downloadLink.download = `${memberId}-qr.png`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
-
-        setShowModal(true);
-      }
-      URL.revokeObjectURL(blobURL);
-    };
-    image.src = blobURL;
+    if (!qrCode) return;
+    const downloadLink = document.createElement("a");
+    downloadLink.href = qrCode;
+    downloadLink.download = `${memberId}-qr.png`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    setShowModal(true);
   };
 
   return (
@@ -221,7 +131,25 @@ export default function MyPassForm() {
             {/* QR Card Container */}
             <div className="pb-4">
               <div className="bg-white p-3 rounded-2xl w-44 h-44 flex items-center justify-center shadow-inner">
-                {qrCode ? (
+                {isLoading ? (
+                  // Spinner while fetching QR from API
+                  <div className="w-full h-full flex items-center justify-center">
+                    <svg
+                      className="animate-spin text-gray-300"
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="32"
+                      height="32"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                    </svg>
+                  </div>
+                ) : qrCode ? (
                   <Image
                     src={qrCode}
                     alt={`QR code for ${memberId}`}
@@ -231,7 +159,9 @@ export default function MyPassForm() {
                     unoptimized
                   />
                 ) : (
-                  <QrCodePlaceholder />
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-[11px] text-gray-300 font-inter">No QR</span>
+                  </div>
                 )}
               </div>
             </div>
