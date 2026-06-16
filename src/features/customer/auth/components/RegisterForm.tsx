@@ -200,6 +200,7 @@ export default function RegisterForm() {
                 value={contactNumber}
                 onChange={(e) => setContactNumber(e.target.value)}
                 placeholder="09XX XXX XXXX"
+                maxLength={11}
                 className="bg-white border border-[#e2e7f0] focus:border-gym-lime focus:ring-1 focus:ring-gym-lime focus:outline-none rounded-xl h-11.5 px-3.5 py-3 font-inter font-normal text-sm text-gym-dark placeholder-gym-dark/50 transition-all"
                 required
               />
