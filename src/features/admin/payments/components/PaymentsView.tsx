@@ -33,10 +33,30 @@ function typeVariant(t: string): "monthly" | "daily" | "membership" | "unassigne
 }
 
 export function PaymentsView() {
-  const [range, setRange]       = useState<Range>("today");
-  const [payments, setPayments] = useState<PaymentRow[]>([]);
-  const [total, setTotal]       = useState(0);
-  const [loading, setLoading]   = useState(true);
+  const [range, setRange]         = useState<Range>("today");
+  const [payments, setPayments]   = useState<PaymentRow[]>([]);
+  const [total, setTotal]         = useState(0);
+  const [loading, setLoading]     = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/admin/payments/export?range=${range}`);
+      if (!res.ok) { alert("Export failed — please try again."); return; }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      const dateSuffix = new Date().toLocaleDateString("en-PH", { day: "2-digit", month: "short", year: "numeric" }).replace(/ /g, "-");
+      const rangeSlug  = { today: "Today", week: "This-Week", month: "This-Month" }[range] ?? range;
+      a.href     = url;
+      a.download = `GymTrack_Payments_${rangeSlug}_${dateSuffix}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   const fetchPayments = useCallback(() => {
     setLoading(true);
@@ -72,8 +92,12 @@ export function PaymentsView() {
             </button>
           ))}
         </div>
-        <button className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
-          <Download size={13} /> Export
+        <button
+          onClick={handleExport}
+          disabled={exporting || loading}
+          className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-60"
+        >
+          <Download size={13} /> {exporting ? "Exporting…" : "Export"}
         </button>
       </div>
 
