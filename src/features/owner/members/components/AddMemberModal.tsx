@@ -37,14 +37,40 @@ function Field({
 }
 
 export function AddMemberModal({ open, onClose, onConfirm }: AddMemberModalProps) {
-  const [form, setForm] = useState({ name: "", contact: "", birth: "", address: "" });
+  const [form, setForm]     = useState({ name: "", contact: "", gender: "Male", address: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
 
   if (!open) return null;
 
-  const handleConfirm = () => {
-    onConfirm("Member added", "New member created · status Unassigned");
-    setForm({ name: "", contact: "", birth: "", address: "" });
-  };
+  async function handleConfirm() {
+    setError("");
+    if (!form.name || !form.contact || !form.address) {
+      setError("Full name, contact, and address are required");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.name,
+          contactNumber: form.contact,
+          gender: form.gender,
+          address: form.address,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Failed to create member"); return; }
+      onConfirm("Member added", `${form.name} · ${data.member?.memberId ?? ""} created`);
+      setForm({ name: "", contact: "", gender: "Male", address: "" });
+    } catch {
+      setError("Network error — please try again");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -72,12 +98,16 @@ export function AddMemberModal({ open, onClose, onConfirm }: AddMemberModalProps
               value={form.contact}
               onChange={(v) => setForm((f) => ({ ...f, contact: v }))}
             />
-            <Field
-              label="Birth date"
-              placeholder="MM/DD/YYYY"
-              value={form.birth}
-              onChange={(v) => setForm((f) => ({ ...f, birth: v }))}
-            />
+            <div className="mb-3.5">
+              <label className="block text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-1.5 font-inter">Gender</label>
+              <select
+                value={form.gender}
+                onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
+                className="w-full bg-gray-50 border border-black/14 rounded-lg px-3 py-2.5 text-[13px] text-gym-dark font-inter outline-none focus:border-gym-lime transition-colors box-border"
+              >
+                <option>Male</option><option>Female</option><option>Other</option>
+              </select>
+            </div>
           </div>
           <Field
             label="Address"
@@ -97,11 +127,15 @@ export function AddMemberModal({ open, onClose, onConfirm }: AddMemberModalProps
           >
             Cancel
           </button>
+          {error && (
+            <div className="mb-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
+          )}
           <button
             onClick={handleConfirm}
-            className="px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none"
+            disabled={loading}
+            className="px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none disabled:opacity-60"
           >
-            Create member
+            {loading ? "Creating…" : "Create member"}
           </button>
         </div>
       </div>

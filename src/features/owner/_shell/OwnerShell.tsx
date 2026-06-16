@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { LogOut, Menu, X, QrCode } from "lucide-react";
+import { Menu, X, QrCode } from "lucide-react";
 import { OwnerToast } from "@/features/owner/_ui";
 
 /* ── Nav items with inline SVG icons matching the Figma ── */
@@ -99,10 +99,16 @@ interface OwnerShellProps { children: React.ReactNode }
 
 export function OwnerShell({ children }: OwnerShellProps) {
   const pathname = usePathname();
+  const router   = useRouter();
   const [toast, setToast] = useState({ show: false, title: "", subtitle: "" });
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const slug = sectionSlug[pathname] ?? "owner";
+
+  async function handleLogout() {
+    await fetch("/api/auth/owner-logout", { method: "POST" }).catch(() => {});
+    router.push("/owner/login");
+  }
 
   return (
     <div className="min-h-screen flex bg-[#E8E8E8] font-inter">
@@ -176,16 +182,15 @@ export function OwnerShell({ children }: OwnerShellProps) {
           })}
         </nav>
 
-        {/* User / sign-out — initials avatar "EG", name "Elena G.", role "Owner" */}
-        <Link
-          href="/owner/login"
-          onClick={() => setMobileOpen(false)}
+        {/* User / sign-out */}
+        <button
+          onClick={handleLogout}
           style={{
             borderTop: "1px solid rgba(0,0,0,0.10)",
             paddingTop: 14, marginTop: 8,
             display: "flex", alignItems: "center", gap: 9,
             cursor: "pointer", padding: "14px 8px 4px",
-            textDecoration: "none",
+            background: "none", border: "none", width: "100%",
           }}
         >
           <div
@@ -196,21 +201,20 @@ export function OwnerShell({ children }: OwnerShellProps) {
               fontSize: 11, fontWeight: 700, fontFamily: "var(--font-space-grotesk, sans-serif)",
             }}
           >
-            EG
+            OW
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
             <div style={{ fontSize: 12, color: "#0F0F0F", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Elena G.
+              Sign out
             </div>
             <div style={{ fontSize: 10, color: "#9A9A9A" }}>Owner</div>
           </div>
-          {/* Logout icon matching Figma */}
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A9A" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
             <polyline points="16 17 21 12 16 7"/>
             <line x1="21" y1="12" x2="9" y2="12"/>
           </svg>
-        </Link>
+        </button>
       </aside>
 
       {/* ── Main content area ── */}
@@ -253,9 +257,9 @@ export function OwnerShell({ children }: OwnerShellProps) {
                 fontFamily: "var(--font-space-grotesk, sans-serif)",
               }}
             >
-              EG
-            </span>
-            <span className="hidden sm:inline">Elena G. · Owner</span>
+            OW
+          </span>
+            <span className="hidden sm:inline">Owner</span>
           </span>
         </div>
 

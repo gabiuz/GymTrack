@@ -4,7 +4,24 @@ import { Prisma } from '@/generated/prisma'
 import bcrypt from 'bcryptjs'
 import QRCode from 'qrcode'
 import { z } from 'zod'
-import { signToken, sessionCookieOptions } from '@/lib/auth'
+import {
+  signToken,
+  sessionCookieOptions,
+  ADMIN_SESSION_COOKIE,
+  OWNER_SESSION_COOKIE,
+  verifyAdminToken,
+  verifyOwnerToken,
+} from '@/lib/auth'
+
+// ─── Verify either admin or owner session cookie
+async function requireStaffOrOwner(req: NextRequest) {
+  const adminToken = req.cookies.get(ADMIN_SESSION_COOKIE)?.value
+  const ownerToken = req.cookies.get(OWNER_SESSION_COOKIE)?.value
+  const token = ownerToken ?? adminToken
+  if (!token) return null
+  const payload = await (ownerToken ? verifyOwnerToken(ownerToken) : verifyAdminToken(adminToken!))
+  return payload
+}
 
 // ─── Validation schema
 const CreateMemberSchema = z.object({
@@ -42,6 +59,9 @@ async function generateMemberId(tx: Prisma.TransactionClient): Promise<string> {
 // ─── GET /api/members
 export async function GET(req: NextRequest) {
   try {
+    const session = await requireStaffOrOwner(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search') ?? ''
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
@@ -57,6 +77,8 @@ export async function GET(req: NextRequest) {
       }
       : {}
 
+    const now = new Date()
+
     const [members, total] = await Promise.all([
       prisma.member.findMany({
         where,
@@ -71,12 +93,46 @@ export async function GET(req: NextRequest) {
           gender: true,
           photoUrl: true,
           createdAt: true,
+          memberships: {
+            orderBy: { endDate: 'desc' },
+            take: 1,
+            select: { endDate: true },
+          },
+          monthlyPlans: {
+            orderBy: { endDate: 'desc' },
+            take: 1,
+            select: { endDate: true },
+          },
         },
       }),
       prisma.member.count({ where }),
     ])
 
-    return NextResponse.json({ data: members, total, page, limit })
+    const data = members.map((m) => {
+      const latestMembership = m.memberships[0] ?? null
+      const latestPlan = m.monthlyPlans[0] ?? null
+      const hasActiveMembership = latestMembership ? latestMembership.endDate >= now : false
+      const hasActivePlan = latestPlan ? latestPlan.endDate >= now : false
+
+      const membershipStatus = hasActivePlan || hasActiveMembership
+        ? 'active'
+        : latestMembership || latestPlan
+        ? 'expired'
+        : 'unassigned'
+
+      return {
+        id: m.id,
+        memberId: m.memberId,
+        fullName: m.fullName,
+        contactNumber: m.contactNumber,
+        gender: m.gender,
+        photoUrl: m.photoUrl,
+        createdAt: m.createdAt,
+        membershipStatus,
+      }
+    })
+
+    return NextResponse.json({ data, total, page, limit })
   } catch (error) {
     console.error('[GET /api/members]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -86,6 +142,9 @@ export async function GET(req: NextRequest) {
 // ─── POST /api/members
 export async function POST(req: NextRequest) {
   try {
+    const postSession = await requireStaffOrOwner(req)
+    if (!postSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
     const body = await req.json()
 
     // ── Validate with Zod

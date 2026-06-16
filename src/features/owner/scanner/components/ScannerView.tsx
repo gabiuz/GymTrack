@@ -1,43 +1,38 @@
 "use client";
 
 import {
-  Camera,
-  CameraOff,
-  RefreshCw,
-  QrCode,
-  Search,
-  CheckCircle,
-  AlertTriangle,
-  Check,
-  X as XIcon,
+  Camera, CameraOff, RefreshCw, QrCode, Search,
+  CheckCircle, AlertTriangle, Check, X as XIcon, Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { ManageMembershipModal } from "@/features/owner/members/components/ManageMembershipModal";
 import { StatusPill } from "@/features/owner/_ui";
-// NOTE: owner copy — diverge from admin/scanner/ScannerView as needed
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 type ScanState =
-  | "perm"
-  | "blocked"
-  | "ready"
-  | "res-a"
-  | "res-b"
-  | "res-c"
-  | "res-d"
-  | "res-guest"
-  | "res-invalid"
-  | "outcome";
+  | "perm" | "blocked" | "ready" | "loading"
+  | "res-a" | "res-b" | "res-c" | "res-d"
+  | "res-guest" | "res-invalid" | "outcome";
 
 interface OutcomeData { kind: "ok" | "deny"; title: string; sub: string; }
+
+interface CheckinResult {
+  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned";
+  member?: { id: number; memberId: string; fullName: string; photoUrl: string | null };
+  rate?: number;
+  planEndDate?: string;
+  membershipEndDate?: string;
+}
+
 interface ScannerViewProps { onToast: (title: string, sub: string) => void; }
 
+// ── UI helpers ────────────────────────────────────────────────────────────────
 function InitialsAvatar({ name, size = 52 }: { name: string; size?: number }) {
   const initials = name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div
-      style={{ width: size, height: size, fontSize: size * 0.32 }}
-      className="rounded-full bg-gray-100 flex items-center justify-center shrink-0 font-inter font-semibold text-gray-400 tracking-wide"
-    >
+    <div style={{ width: size, height: size, fontSize: size * 0.32 }}
+      className="rounded-full bg-gray-100 flex items-center justify-center shrink-0 font-inter font-semibold text-gray-400 tracking-wide">
       {initials}
     </div>
   );
@@ -56,47 +51,167 @@ function MemberHeader({ name, id, pill }: { name: string; id: string; pill: Reac
   );
 }
 
-function ScanCard({
-  children,
-  borderColor,
-}: {
-  children: React.ReactNode;
-  borderColor?: string;
-}) {
+function ScanCard({ children, borderColor }: { children: React.ReactNode; borderColor?: string }) {
   return (
     <div className="max-w-[580px] mx-auto">
-      <div
-        className="bg-white rounded-[20px] p-5 lg:p-7 shadow-[0_2px_16px_rgba(0,0,0,0.06)]"
-        style={{ border: `1.5px solid ${borderColor ?? "rgba(0,0,0,0.08)"}` }}
-      >
+      <div className="bg-white rounded-[20px] p-5 lg:p-7 shadow-[0_2px_16px_rgba(0,0,0,0.06)]"
+        style={{ border: `1.5px solid ${borderColor ?? "rgba(0,0,0,0.08)"}` }}>
         {children}
       </div>
     </div>
   );
 }
 
+function fmtDate(iso?: string) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-PH", { day: "numeric", month: "short", year: "numeric" });
+}
 
-
+// ── Main component ────────────────────────────────────────────────────────────
 export function ScannerView({ onToast }: ScannerViewProps) {
-  const [state, setState] = useState<ScanState>("ready");
-  const [outcome, setOutcome] = useState<OutcomeData>({ kind: "ok", title: "", sub: "" });
+  const [state, setState]       = useState<ScanState>("perm");
+  const [outcome, setOutcome]   = useState<OutcomeData>({ kind: "ok", title: "", sub: "" });
+  const [result, setResult]     = useState<CheckinResult | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
-  const [manageCtx, setManageCtx] = useState({
-    name: "",
-    id: "",
-    status: "unassigned" as "active" | "expired" | "unassigned",
-  });
-  const [lookupVal, setLookupVal] = useState("");
+  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", memberDbId: 0, status: "unassigned" as "active" | "expired" | "unassigned" });
+  const [idSuffix, setIdSuffix] = useState("");
+  const [walkInName, setWalkInName] = useState("");
+  const [guestName, setGuestName]   = useState("");
+  const scannerRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scannerInstance = useRef<any>(null);
 
   const go = (s: ScanState) => setState(s);
-  const recordOutcome = (kind: "ok" | "deny", title: string, sub: string) => {
+
+  // ── Camera ───────────────────────────────────────────────────────────────
+  const startCamera = useCallback(async () => {
+    if (!scannerRef.current) return;
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const qr = new Html5Qrcode("owner-qr-reader");
+      scannerInstance.current = qr;
+      await qr.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (text) => { void doCheckin(text); },
+        () => {}
+      );
+    } catch {
+      go("blocked");
+    }
+  }, []);
+
+  const stopCamera = useCallback(async () => {
+    try { await scannerInstance.current?.stop(); } catch {}
+    try { scannerInstance.current?.clear?.(); } catch {}
+    scannerInstance.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (state === "ready") startCamera();
+    else stopCamera();
+    return () => { void stopCamera(); };
+  }, [state]);
+
+  // ── API calls ────────────────────────────────────────────────────────────
+  async function doCheckin(rawId: string | null) {
+    go("loading");
+    const memberId = rawId?.trim() || null;
+    try {
+      const res  = await fetch("/api/owner/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      const data: CheckinResult = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 404) { go("res-invalid"); return; }
+        go("res-invalid"); return;
+      }
+
+      setResult(data);
+
+      switch (data.status) {
+        case "monthly_active": go("res-c"); break;
+        case "member_daily":   go("res-b"); break;
+        case "expired":        go("res-d"); break;
+        case "unassigned":     go("res-a"); break;
+        case "guest":          go("res-guest"); break;
+        default:               go("res-invalid");
+      }
+    } catch {
+      go("res-invalid");
+    }
+  }
+
+  async function confirmPayment(visitType: "daily" | "monthly_plan", amount: number, name?: string) {
+    try {
+      const res = await fetch("/api/owner/checkin/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId:    result?.member?.memberId ?? null,
+          walkInName:  name ?? null,
+          visitType,
+          amount,
+        }),
+      });
+      if (!res.ok) {
+        recordOutcome("deny", "Error recording", "Could not save — try again");
+        return;
+      }
+      const label = name ? `Guest · ${name}` : result?.member?.fullName ?? "Visit";
+      recordOutcome("ok", "Payment recorded", `${label} · ₱${amount} · attendance logged`);
+      onToast("Payment recorded", `₱${amount} · attendance logged`);
+    } catch {
+      recordOutcome("deny", "Network error", "Could not save — try again");
+    }
+  }
+
+  function recordOutcome(kind: "ok" | "deny", title: string, sub: string) {
     setOutcome({ kind, title, sub });
     go("outcome");
-  };
-  const openManage = (name: string, id: string, status: "active" | "expired" | "unassigned") => {
-    setManageCtx({ name, id, status });
+  }
+
+  function openManage(name: string, id: string, memberDbId: number, status: "active" | "expired" | "unassigned") {
+    setManageCtx({ name, id, memberDbId, status });
     setManageOpen(true);
-  };
+  }
+
+  const memberId = result?.member ? `MEM-${String(result.member.id).padStart(6, "0")}` : "";
+
+  // ── Manual ID input ──────────────────────────────────────────────────────
+  function handleSuffixChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setIdSuffix(val);
+  }
+  function handleLookup() {
+    if (!idSuffix) return;
+    const full = `MEM-${idSuffix.padStart(6, "0")}`;
+    void doCheckin(full);
+  }
+
+  const ManualLookup = (
+    <div className="flex gap-2.5 items-center">
+      <div className="flex items-center flex-1 bg-gray-50 border border-black/14 rounded-lg overflow-hidden focus-within:border-gym-lime transition-colors">
+        <span className="pl-3.5 text-sm font-mono text-gray-400 select-none">MEM-</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="000000"
+          value={idSuffix}
+          onChange={handleSuffixChange}
+          onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+          className="flex-1 bg-transparent border-none outline-none px-1 py-2.5 text-sm font-mono text-gym-dark"
+        />
+      </div>
+      <button onClick={handleLookup}
+        className="flex items-center gap-1.5 px-4.5 py-2.5 text-sm font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50">
+        <Search size={13} /> Look up
+      </button>
+    </div>
+  );
 
   return (
     <>
@@ -122,6 +237,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
               </div>
             </div>
           </div>
+          <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>
+          {ManualLookup}
         </ScanCard>
       )}
 
@@ -141,90 +258,93 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter flex items-center gap-1.5">
             <Search size={12} /> Check in by Member ID
           </div>
-          <div className="flex gap-2.5">
-            <input type="text" placeholder="MEM-000000" value={lookupVal} onChange={(e) => setLookupVal(e.target.value)}
-              className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-mono text-gym-dark outline-none focus:border-gym-lime transition-colors" />
-            <button onClick={() => go("res-c")} className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
-              <Search size={13} /> Look up
-            </button>
-          </div>
+          {ManualLookup}
         </ScanCard>
       )}
 
       {/* ── READY TO SCAN ── */}
       {state === "ready" && (
         <div className="max-w-[580px] mx-auto flex flex-col gap-3.5">
-          {/* Viewfinder */}
-          <div className="relative h-[220px] bg-gray-50 border border-black/8 rounded-2xl flex flex-col items-center justify-center gap-2.5 overflow-hidden">
-            {/* Corner brackets */}
+          <div className="relative h-[220px] bg-gray-900 border border-black/8 rounded-2xl flex flex-col items-center justify-center gap-2.5 overflow-hidden">
             {[
               { top: 14, left: 14, borderTop: "2.5px solid #C5FF00", borderLeft: "2.5px solid #C5FF00", borderRadius: "4px 0 0 0" },
               { top: 14, right: 14, borderTop: "2.5px solid #C5FF00", borderRight: "2.5px solid #C5FF00", borderRadius: "0 4px 0 0" },
               { bottom: 14, left: 14, borderBottom: "2.5px solid #C5FF00", borderLeft: "2.5px solid #C5FF00", borderRadius: "0 0 0 4px" },
               { bottom: 14, right: 14, borderBottom: "2.5px solid #C5FF00", borderRight: "2.5px solid #C5FF00", borderRadius: "0 0 4px 0" },
-            ].map((s, i) => (
-              <div key={i} style={{ position: "absolute", width: 24, height: 24, ...s }} />
-            ))}
-            <div
-              style={{
-                position: "absolute", left: 44, right: 44, height: 2,
-                background: "#C5FF00", opacity: 0.8, top: "18%",
-                animation: "spscan 2s ease-in-out infinite", borderRadius: 1,
-              }}
-            />
-            <QrCode size={36} className="text-black/14" />
-            <span className="text-[13px] text-gray-400 font-inter">Point the member&apos;s QR at the camera</span>
+            ].map((s, i) => <div key={i} style={{ position: "absolute", width: 24, height: 24, ...s }} />)}
+            <div style={{ position: "absolute", left: 44, right: 44, height: 2, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
+            <div id="owner-qr-reader" ref={scannerRef} className="absolute inset-0" />
+            {!scannerInstance.current && (
+              <>
+                <QrCode size={36} className="text-white/20 relative z-10" />
+                <span className="text-[13px] text-white/40 font-inter relative z-10">Initialising camera…</span>
+              </>
+            )}
           </div>
 
-          {/* Manual lookup */}
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
             <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>
-            <div className="flex gap-2.5">
-              <input type="text" placeholder="MEM-000000" value={lookupVal} onChange={(e) => setLookupVal(e.target.value)}
-                className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-mono text-gym-dark outline-none focus:border-gym-lime transition-colors" />
-              <button onClick={() => go("res-c")} className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50">
-                <Search size={13} /> Look up
-              </button>
+            {ManualLookup}
+            <div className="mt-3.5 pt-3.5 border-t border-black/8">
+              <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Walk-in / guest</div>
+              <div className="flex gap-2.5 items-center">
+                <input
+                  type="text"
+                  placeholder="Guest name (optional)"
+                  value={walkInName}
+                  onChange={(e) => setWalkInName(e.target.value)}
+                  className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm text-gym-dark font-inter outline-none focus:border-gym-lime transition-colors"
+                />
+                <button onClick={() => { void doCheckin(null); }}
+                  className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+                  Guest visit
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── RES A — Unassigned ── */}
-      {state === "res-a" && (
+      {/* ── LOADING ── */}
+      {state === "loading" && (
         <ScanCard>
-          <MemberHeader name="Liza Tan" id="MEM-000014" pill={<StatusPill variant="unassigned" size="md">Unassigned</StatusPill>} />
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <Loader2 size={36} className="text-gym-lime animate-spin" />
+            <span className="text-[14px] text-gray-400 font-inter">Looking up member…</span>
+          </div>
+        </ScanCard>
+      )}
+
+      {/* ── RES A — Unassigned ── */}
+      {state === "res-a" && result?.member && (
+        <ScanCard>
+          <MemberHeader name={result.member.fullName} id={result.member.memberId} pill={<StatusPill variant="unassigned" size="md">Unassigned</StatusPill>} />
           <div className="flex items-start gap-2.5 bg-gym-lime/15 rounded-xl px-4 py-3.5 mb-5 font-inter">
-            <div className="w-5 h-5 rounded-full border-[1.5px] border-[#5A7000] flex items-center justify-center shrink-0 mt-0.5">
-              <div className="w-0.5 h-2 bg-[#5A7000] rounded-sm mt-0.5" />
-            </div>
             <span className="text-[15px] text-[#3A5000] leading-relaxed">No membership or plan on file. Choose how to proceed.</span>
           </div>
-          <button onClick={() => openManage("Liza Tan", "MEM-000014", "unassigned")}
+          <button onClick={() => openManage(result.member!.fullName, result.member!.memberId, result.member!.id, "unassigned")}
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5">
             Register membership · ₱200/yr
           </button>
-          <button onClick={() => go("res-guest")}
+          <button onClick={() => void confirmPayment("daily", 75)}
             className="w-full py-4 text-[15px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
-            Daily visit
+            Daily visit · ₱75
           </button>
         </ScanCard>
       )}
 
       {/* ── RES B — Daily visit (member) ── */}
-      {state === "res-b" && (
+      {state === "res-b" && result?.member && (
         <ScanCard>
-          <MemberHeader name="Mark Cruz" id="MEM-000008" pill={<StatusPill variant="active" size="md">Active member</StatusPill>} />
+          <MemberHeader name={result.member.fullName} id={result.member.memberId} pill={<StatusPill variant="active" size="md">Active member</StatusPill>} />
           <div className="text-center px-4 py-5 bg-gray-50 rounded-xl mb-3.5">
             <div className="text-[11px] font-semibold text-gray-400 tracking-[0.08em] uppercase font-inter mb-1.5">Daily visit · amount due</div>
-            <div className="font-space text-[52px] font-bold text-gym-dark tracking-tight leading-none">₱70</div>
+            <div className="font-space text-[52px] font-bold text-gym-dark tracking-tight leading-none">₱{result.rate ?? 70}</div>
             <div className="text-[13px] text-gray-400 font-inter mt-1.5">member rate · non-member is ₱75</div>
           </div>
-          <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">
-            Paid records attendance + payment. Unpaid denies access.
-          </div>
+          <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">Paid records attendance + payment. Unpaid denies access.</div>
           <div className="flex flex-col lg:flex-row gap-2.5">
-            <button onClick={() => recordOutcome("ok", "Payment recorded", "Daily visit · ₱70 · attendance logged")}
+            <button onClick={() => void confirmPayment("daily", result.rate ?? 70)}
               className="flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
               <Check size={16} strokeWidth={2.5} /> Mark paid
             </button>
@@ -236,7 +356,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         </ScanCard>
       )}
 
-      {/* ── RES GUEST — Daily visit (guest) ── */}
+      {/* ── RES GUEST — Daily visit (guest / walk-in) ── */}
       {state === "res-guest" && (
         <ScanCard>
           <div className="flex items-center gap-3.5 mb-5">
@@ -244,7 +364,9 @@ export function ScannerView({ onToast }: ScannerViewProps) {
               <QrCode size={22} className="text-gray-400" />
             </div>
             <div className="flex-1">
-              <div className="font-space font-bold text-[18px] tracking-tight text-gym-dark">Guest visitor</div>
+              <div className="font-space font-bold text-[18px] tracking-tight text-gym-dark">
+                {walkInName ? walkInName : "Guest visitor"}
+              </div>
               <div className="text-[13px] text-gray-400 font-inter mt-0.5">No membership on file</div>
             </div>
             <StatusPill variant="guest" size="md">Guest</StatusPill>
@@ -254,11 +376,22 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <div className="font-space text-[52px] font-bold text-gym-dark tracking-tight leading-none">₱75</div>
             <div className="text-[13px] text-gray-400 font-inter mt-1.5">guest rate · members pay ₱70</div>
           </div>
-          <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">
-            Paid records attendance + payment. Unpaid denies access.
-          </div>
+          {walkInName && (
+            <div className="mb-3.5">
+              <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Guest name (entered)</div>
+              <div className="flex gap-2.5">
+                <input
+                  type="text"
+                  value={guestName || walkInName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm text-gym-dark font-inter outline-none focus:border-gym-lime transition-colors"
+                />
+              </div>
+            </div>
+          )}
+          <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">Paid records attendance + payment. Unpaid denies access.</div>
           <div className="flex flex-col lg:flex-row gap-2.5">
-            <button onClick={() => recordOutcome("ok", "Payment recorded", "Guest daily visit · ₱75 · attendance logged")}
+            <button onClick={() => void confirmPayment("daily", 75, guestName || walkInName || undefined)}
               className="flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
               <Check size={16} strokeWidth={2.5} /> Mark paid
             </button>
@@ -270,8 +403,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         </ScanCard>
       )}
 
-      {/* ── RES C — Access granted ── */}
-      {state === "res-c" && (
+      {/* ── RES C — Access granted (monthly_active) ── */}
+      {state === "res-c" && result?.member && (
         <ScanCard borderColor="rgba(22,163,74,0.25)">
           <div className="text-center pb-5.5 border-b border-black/8 mb-5.5">
             <div className="w-16 h-16 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
@@ -282,18 +415,18 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           </div>
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3.5">
-              <InitialsAvatar name="Ana Reyes" />
+              <InitialsAvatar name={result.member.fullName} />
               <div className="flex-1">
-                <div className="font-space font-bold text-[17px] text-gym-dark">Ana Reyes</div>
-                <div className="text-xs text-gray-400 font-mono mt-0.5">MEM-000001</div>
+                <div className="font-space font-bold text-[17px] text-gym-dark">{result.member.fullName}</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">{result.member.memberId}</div>
               </div>
             </div>
             <div className="text-left lg:text-right">
               <StatusPill variant="active" size="md">Monthly · active</StatusPill>
-              <div className="text-xs text-gray-400 font-inter mt-1">expires 9 Jul 2026</div>
+              <div className="text-xs text-gray-400 font-inter mt-1">expires {fmtDate(result.planEndDate)}</div>
             </div>
           </div>
-          <button onClick={() => go("ready")}
+          <button onClick={() => { setResult(null); setIdSuffix(""); setWalkInName(""); go("ready"); }}
             className="w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
             <QrCode size={16} /> Scan next member
           </button>
@@ -301,20 +434,20 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       )}
 
       {/* ── RES D — Expired ── */}
-      {state === "res-d" && (
+      {state === "res-d" && result?.member && (
         <ScanCard borderColor="rgba(217,119,6,0.25)">
-          <MemberHeader name="Jose Santos" id="MEM-000023" pill={<StatusPill variant="expired" size="md">Plan expired</StatusPill>} />
+          <MemberHeader name={result.member.fullName} id={result.member.memberId} pill={<StatusPill variant="expired" size="md">Plan expired</StatusPill>} />
           <div className="flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5 mb-5 font-inter">
             <AlertTriangle size={16} className="text-amber-600 shrink-0" />
-            <span className="text-[15px] text-amber-600">Monthly plan expired on 1 Jun 2026.</span>
+            <span className="text-[15px] text-amber-600">Membership expired on {fmtDate(result.membershipEndDate)}.</span>
           </div>
-          <button onClick={() => openManage("Jose Santos", "MEM-000023", "expired")}
+          <button onClick={() => openManage(result.member!.fullName, result.member!.memberId, result.member!.id, "expired")}
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5">
-            Renew monthly plan
+            Renew membership
           </button>
-          <button onClick={() => go("res-b")}
+          <button onClick={() => void confirmPayment("daily", result.rate ?? 70)}
             className="w-full py-4 text-[15px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
-            Switch to daily visit
+            Switch to daily visit · ₱{result.rate ?? 70}
           </button>
         </ScanCard>
       )}
@@ -334,20 +467,14 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             </div>
           </div>
           <div className="flex justify-center mb-5.5">
-            <button onClick={() => go("ready")}
+            <button onClick={() => { setIdSuffix(""); go("ready"); }}
               className="flex items-center gap-1.5 px-7 py-3.5 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
               <RefreshCw size={15} /> Scan again
             </button>
           </div>
           <div className="border-t border-black/8 pt-5">
             <div className="text-[11px] font-semibold text-gray-400 tracking-[0.07em] uppercase mb-2.5 font-inter">Enter Member ID manually</div>
-            <div className="flex gap-2.5">
-              <input type="text" placeholder="MEM-000000" value={lookupVal} onChange={(e) => setLookupVal(e.target.value)}
-                className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-mono text-gym-dark outline-none focus:border-gym-lime transition-colors" />
-              <button onClick={() => go("res-c")} className="flex items-center gap-1.5 px-4.5 py-2.5 text-sm font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50">
-                <Search size={13} /> Look up
-              </button>
-            </div>
+            {ManualLookup}
           </div>
         </ScanCard>
       )}
@@ -356,13 +483,9 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       {state === "outcome" && (
         <ScanCard borderColor={outcome.kind === "ok" ? "rgba(22,163,74,0.25)" : "rgba(220,38,38,0.25)"}>
           <div className="text-center py-2 pb-6">
-            <div
-              className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4.5 border-[1.5px] ${
-                outcome.kind === "ok"
-                  ? "bg-green-50 border-green-200"
-                  : "bg-red-50 border-red-200"
-              }`}
-            >
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4.5 border-[1.5px] ${
+              outcome.kind === "ok" ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+            }`}>
               {outcome.kind === "ok"
                 ? <CheckCircle size={34} className="text-green-600" strokeWidth={2} />
                 : <XIcon size={34} className="text-red-600" strokeWidth={2} />}
@@ -372,7 +495,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             </div>
             <div className="text-sm text-gray-400 font-inter">{outcome.sub}</div>
           </div>
-          <button onClick={() => go("ready")}
+          <button onClick={() => { setResult(null); setIdSuffix(""); setWalkInName(""); setGuestName(""); go("ready"); }}
             className="w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
             <QrCode size={16} /> Scan next member
           </button>
@@ -383,6 +506,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         open={manageOpen}
         memberName={manageCtx.name}
         memberId={manageCtx.id}
+        memberDbId={manageCtx.memberDbId}
         memberStatus={manageCtx.status}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); go("ready"); }}

@@ -8,45 +8,93 @@ interface ManageMembershipModalProps {
   open: boolean;
   memberName: string;
   memberId: string;
+  memberNumericId: number | null;
   memberStatus: "active" | "expired" | "unassigned";
   onClose: () => void;
   onConfirm: (title: string, sub: string) => void;
 }
 
 const plans = [
-  { key: "none", label: "None",     sub: "daily rate", price: 0 },
-  { key: "1m",   label: "1 month",  sub: "₱799",       price: 799 },
-  { key: "3m",   label: "3 months", sub: "₱2,199",     price: 2199 },
-  { key: "6m",   label: "6 months", sub: "₱3,999",     price: 3999 },
+  { key: "none", label: "None",     sub: "daily rate", price: 0,    months: 0 },
+  { key: "1m",   label: "1 month",  sub: "₱799",       price: 799,  months: 1 },
+  { key: "3m",   label: "3 months", sub: "₱2,199",     price: 2199, months: 3 },
+  { key: "6m",   label: "6 months", sub: "₱3,999",     price: 3999, months: 6 },
 ];
 
 export function ManageMembershipModal({
   open,
   memberName,
   memberId,
+  memberNumericId,
   memberStatus,
   onClose,
   onConfirm,
 }: ManageMembershipModalProps) {
-  const [membership, setMembership] = useState(true);
+  const [membership, setMembership] = useState(memberStatus !== "active");
   const [plan, setPlan] = useState("1m");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   if (!open) return null;
 
+  const selectedPlan = plans.find((p) => p.key === plan)!;
   const membershipFee = membership ? 200 : 0;
-  const planFee = plans.find((p) => p.key === plan)?.price ?? 0;
+  const planFee = selectedPlan.price;
   const total = membershipFee + planFee;
 
   const expiry = new Date();
   expiry.setFullYear(expiry.getFullYear() + 1);
   const expiryStr = expiry.toLocaleDateString("en-PH", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
+    day: "numeric", month: "short", year: "numeric",
   });
 
   const pillVariant =
     memberStatus === "active" ? "active" : memberStatus === "expired" ? "expired" : "unassigned";
+
+  async function handleConfirm() {
+    if (!memberNumericId) return;
+    setError("");
+    setLoading(true);
+    try {
+      const errors: string[] = [];
+
+      // Renew annual membership if selected
+      if (membership) {
+        const res = await fetch("/api/admin/memberships/renew", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId: memberNumericId }),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          errors.push(d.error ?? "Failed to renew membership");
+        }
+      }
+
+      // Avail monthly plan if selected
+      if (selectedPlan.months > 0) {
+        const res = await fetch("/api/admin/monthly-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId: memberNumericId, duration: selectedPlan.months, amount: planFee }),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          errors.push(d.error ?? "Failed to avail monthly plan");
+        }
+      }
+
+      if (errors.length > 0) {
+        setError(errors.join(" · "));
+      } else {
+        onConfirm("Membership activated", `${memberName} · ₱${total.toLocaleString()} recorded`);
+      }
+    } catch {
+      setError("Network error — please try again");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -83,11 +131,13 @@ export function ManageMembershipModal({
             Annual membership
           </div>
           <div
-            onClick={() => setMembership(!membership)}
-            className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 cursor-pointer transition-all duration-100 ${
-              membership
-                ? "border-[2px] border-gym-lime bg-gym-lime/15"
-                : "border border-black/14 bg-gray-50"
+            onClick={() => memberStatus !== "active" && setMembership(!membership)}
+            className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 transition-all duration-100 ${
+              memberStatus === "active"
+                ? "border border-black/8 bg-gray-50 cursor-not-allowed opacity-60"
+                : membership
+                ? "border-[2px] border-gym-lime bg-gym-lime/15 cursor-pointer"
+                : "border border-black/14 bg-gray-50 cursor-pointer"
             }`}
           >
             <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all ${
@@ -96,7 +146,9 @@ export function ManageMembershipModal({
               {membership && <Check size={13} color="#000" strokeWidth={3} />}
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold text-gym-dark font-inter">Activate membership</div>
+              <div className="text-sm font-semibold text-gym-dark font-inter">
+                {memberStatus === "active" ? "Already active" : "Activate membership"}
+              </div>
               <div className="text-xs text-gray-400 font-inter">Today → {expiryStr} · 1 year</div>
             </div>
             <span className="text-[15px] font-bold text-gym-dark font-space">₱200</span>
@@ -105,9 +157,6 @@ export function ManageMembershipModal({
           {/* Monthly plan */}
           <div className="flex items-center justify-between mb-2.5">
             <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter">Monthly plan</span>
-            {membership && (
-              <span className="text-[11px] text-green-600 font-semibold font-inter">requires membership ✓</span>
-            )}
           </div>
           <div className="grid grid-cols-2 gap-2.5">
             {plans.map((p) => (
@@ -125,6 +174,10 @@ export function ManageMembershipModal({
               </div>
             ))}
           </div>
+
+          {error && (
+            <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
+          )}
         </div>
 
         {/* Summary */}
@@ -138,7 +191,7 @@ export function ManageMembershipModal({
           )}
           {planFee > 0 && (
             <div className="flex justify-between text-[13px] mb-2 font-inter">
-              <span className="text-gray-400">Monthly plan · {plans.find((p) => p.key === plan)?.label}</span>
+              <span className="text-gray-400">Monthly plan · {selectedPlan.label}</span>
               <span className="text-gym-dark font-medium">₱{planFee.toLocaleString()}</span>
             </div>
           )}
@@ -156,11 +209,12 @@ export function ManageMembershipModal({
             Cancel
           </button>
           <button
-            onClick={() => onConfirm("Membership activated", `${memberName} · ₱${total.toLocaleString()} recorded`)}
-            className="flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none"
+            onClick={handleConfirm}
+            disabled={loading || (!membership && selectedPlan.months === 0)}
+            className="flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none disabled:opacity-60"
           >
             <Banknote size={15} />
-            Record payment &amp; activate
+            {loading ? "Processing…" : "Record payment & activate"}
           </button>
         </div>
       </div>
