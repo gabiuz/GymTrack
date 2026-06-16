@@ -142,6 +142,8 @@ export async function GET(req: NextRequest) {
 // ─── POST /api/members  (public — customer self-registration)
 export async function POST(req: NextRequest) {
   try {
+    const postSession = await requireStaffOrOwner(req)
+    if (!postSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await req.json()
 
