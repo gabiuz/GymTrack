@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X, QrCode } from "lucide-react";
 import { OwnerToast } from "@/features/owner/_ui";
 
@@ -102,8 +102,23 @@ export function OwnerShell({ children }: OwnerShellProps) {
   const router   = useRouter();
   const [toast, setToast] = useState({ show: false, title: "", subtitle: "" });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userName, setUserName] = useState("");
+  const [userRole, setUserRole] = useState("");
 
   const slug = sectionSlug[pathname] ?? "owner";
+
+  // Fetch logged-in user name from session
+  useEffect(() => {
+    fetch("/api/auth/admin-me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.name) { setUserName(d.name); setUserRole(d.role); }
+      })
+      .catch(() => {});
+  }, []);
+
+  const firstName = userName.split(" ")[0] || "Owner";
+  const initials = userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "OW";
 
   async function handleLogout() {
     await fetch("/api/auth/owner-logout", { method: "POST" }).catch(() => {});
@@ -195,19 +210,19 @@ export function OwnerShell({ children }: OwnerShellProps) {
         >
           <div
             style={{
-              width: 30, height: 30, borderRadius: "50%", background: "#F0F0F0",
+              width: 30, height: 30, borderRadius: "50%", background: "#0F0F0F",
               display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#5C5C5C", flexShrink: 0, border: "1px solid rgba(0,0,0,0.10)",
+              color: "#C8FF00", flexShrink: 0, border: "1px solid rgba(0,0,0,0.10)",
               fontSize: 11, fontWeight: 700, fontFamily: "var(--font-space-grotesk, sans-serif)",
             }}
           >
-            OW
+            {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
             <div style={{ fontSize: 12, color: "#0F0F0F", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              Sign out
+              {firstName}
             </div>
-            <div style={{ fontSize: 10, color: "#9A9A9A" }}>Owner</div>
+            <div style={{ fontSize: 10, color: "#9A9A9A" }}>{userRole === "owner" ? "Owner" : "Staff"}</div>
           </div>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9A9A" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -257,9 +272,9 @@ export function OwnerShell({ children }: OwnerShellProps) {
                 fontFamily: "var(--font-space-grotesk, sans-serif)",
               }}
             >
-            OW
+            {initials}
           </span>
-            <span className="hidden sm:inline">Owner</span>
+            <span className="hidden sm:inline">{firstName}</span>
           </span>
         </div>
 

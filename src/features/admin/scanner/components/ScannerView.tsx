@@ -28,16 +28,18 @@ type ScanState =
   | "res-d"
   | "res-guest"
   | "res-invalid"
+  | "res-duplicate"
   | "outcome";
 
 interface OutcomeData { kind: "ok" | "deny"; title: string; sub: string; }
 
 interface CheckinResult {
-  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned";
+  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned" | "already_checked_in";
   member?: { id: number; memberId: string; fullName: string; photoUrl: string | null };
   rate?: number;
   planEndDate?: string;
   membershipEndDate?: string;
+  checkedInAt?: string;
 }
 
 interface ScannerViewProps { onToast: (title: string, sub: string) => void; }
@@ -94,6 +96,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [lookupError, setLookupError] = useState("");
   // Override rate used when an unassigned member does a daily visit (₱75 instead of member ₱70)
   const [memberDailyRate, setMemberDailyRate] = useState<number | null>(null);
+  const [cameras, setCameras]         = useState<MediaDeviceInfo[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
 
   const scannerRef = useRef<HTMLDivElement>(null);
   // We store the scanner instance in a ref to avoid it affecting render
@@ -129,12 +133,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       setCheckinResult(data);
 
       switch (data.status) {
-        case "monthly_active": go("res-c"); break;
-        case "member_daily":   go("res-b"); break;
-        case "guest":          go("res-guest"); break;
-        case "expired":        go("res-d"); break;
-        case "unassigned":     go("res-a"); break;
-        default:               go("res-invalid");
+        case "monthly_active":     go("res-c"); break;
+        case "member_daily":       go("res-b"); break;
+        case "guest":              go("res-guest"); break;
+        case "expired":            go("res-d"); break;
+        case "unassigned":         go("res-a"); break;
+        case "already_checked_in": go("res-duplicate"); break;
+        default:                   go("res-invalid");
       }
     } catch {
       go("res-invalid");
@@ -148,7 +153,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     walkIn?: string
   ) => {
     try {
-      await fetch("/api/admin/checkin/confirm", {
+      const res = await fetch("/api/admin/checkin/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -158,8 +163,16 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           amount,
         }),
       });
+      if (res.status === 409) {
+        const errData = await res.json();
+        setCheckinResult((prev) => prev ? { ...prev, checkedInAt: errData.checkedInAt } : prev);
+        go("res-duplicate");
+        return false;
+      }
+      return res.ok;
     } catch {
       // best-effort — we still show the outcome
+      return false;
     }
   }, []);
 
@@ -179,7 +192,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     }
   }, []);
 
-  const startScanner = useCallback(async () => {
+  const startScanner = useCallback(async (cameraId?: string | null) => {
     if (!scannerRef.current) return;
     await stopScanner();
 
@@ -187,25 +200,41 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     const scanner = new Html5Qrcode("qr-reader");
     html5QrRef.current = scanner;
 
+    // Use specific deviceId if provided, otherwise prefer back/environment camera
+    const cameraConstraint: MediaTrackConstraints = cameraId
+      ? { deviceId: { exact: cameraId } }
+      : { facingMode: "environment" };
+
     try {
       await scanner.start(
-        { facingMode: "environment" },
+        cameraConstraint,
         { fps: 10, qrbox: { width: 200, height: 200 } },
         (decodedText) => {
-          // Pause scanner on successful decode
           stopScanner();
           doCheckin(decodedText.trim());
         },
         () => { /* quiet scan errors */ }
       );
+      // After permission granted, enumerate devices (labels are only available post-permission)
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        setCameras(videoDevices);
+        if (!cameraId && videoDevices.length > 0) setActiveCameraId(videoDevices[0].deviceId);
+      }
     } catch {
       go("blocked");
     }
   }, [stopScanner, doCheckin]);
 
+  const handleCameraChange = useCallback(async (deviceId: string) => {
+    setActiveCameraId(deviceId);
+    await startScanner(deviceId);
+  }, [startScanner]);
+
   useEffect(() => {
     if (state === "ready") {
-      startScanner();
+      startScanner(activeCameraId ?? undefined);
     } else {
       stopScanner();
     }
@@ -224,7 +253,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
 
   const handleLookup = () => {
     if (!lookupVal.trim()) return;
-    doCheckin(lookupVal.trim());
+    const full = `MEM-${lookupVal.trim().padStart(6, "0")}`;
+    doCheckin(full);
+  };
+
+  const handleLookupChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+    setLookupVal(val);
   };
 
   const formatDate = (iso?: string) =>
@@ -273,11 +308,20 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter flex items-center gap-1.5">
             <Search size={12} /> Check in by Member ID
           </div>
-          <div className="flex gap-2.5">
-            <input type="text" placeholder="MEM-000000" value={lookupVal} onChange={(e) => setLookupVal(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-              className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-mono text-gym-dark outline-none focus:border-gym-lime transition-colors" />
-            <button onClick={handleLookup} className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+          <div className="flex gap-2.5 items-center">
+            <div className="flex items-center flex-1 bg-gray-50 border border-black/14 rounded-lg overflow-hidden focus-within:border-gym-lime transition-colors">
+              <span className="pl-3.5 text-sm font-mono text-gray-400 select-none">MEM-</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                placeholder="000000"
+                value={lookupVal}
+                onChange={handleLookupChange}
+                onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+                className="flex-1 bg-transparent border-none outline-none px-1 py-2.5 text-sm font-mono text-gym-dark"
+              />
+            </div>
+            <button onClick={handleLookup} className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 whitespace-nowrap">
               <Search size={13} /> Look up
             </button>
           </div>
@@ -308,25 +352,53 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             ].map((s, i) => (
               <div key={i} style={{ position: "absolute", width: 24, height: 24, zIndex: 10, ...s }} />
             ))}
-            <div
-              style={{
-                position: "absolute", left: 44, right: 44, height: 2, zIndex: 10,
-                background: "#C5FF00", opacity: 0.8, top: "18%",
-                animation: "spscan 2s ease-in-out infinite", borderRadius: 1,
-              }}
-            />
+            <div style={{ position: "absolute", left: 44, right: 44, height: 2, zIndex: 10, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
             {/* html5-qrcode mounts the camera here */}
             <div id="qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: 220 }} />
           </div>
 
+
+          {/* Camera selector — shown once 2+ cameras are detected */}
+          {cameras.length > 1 && (
+            <div className="bg-white border border-black/8 rounded-xl px-4 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] flex items-center gap-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter shrink-0">Camera</span>
+              <select
+                value={activeCameraId ?? ""}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[13px] text-gym-dark font-inter cursor-pointer min-w-0"
+              >
+                {cameras.map((cam, i) => {
+                  const label = cam.label
+                    ? (/front|user|facing front/i.test(cam.label) ? "Front Camera"
+                      : /back|rear|environment|facing back/i.test(cam.label) ? "Back Camera"
+                      : cam.label.length > 40 ? cam.label.slice(0, 37) + "…" : cam.label)
+                    : `Camera ${i + 1}`;
+                  return <option key={cam.deviceId} value={cam.deviceId}>{label}</option>;
+                })}
+              </select>
+            </div>
+          )}
+
           {/* Manual lookup */}
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-            <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>
-            <div className="flex gap-2.5">
-              <input type="text" placeholder="MEM-000000" value={lookupVal} onChange={(e) => setLookupVal(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-mono text-gym-dark outline-none focus:border-gym-lime transition-colors" />
-              <button onClick={handleLookup} className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50">
+            <div className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase mb-2 font-inter">Or enter Member ID manually</div>
+            <div className="flex gap-2.5 items-center">
+              <div className="flex items-center flex-1 bg-gray-50 border border-black/14 rounded-lg overflow-hidden focus-within:border-gym-lime transition-colors">
+                <span className="pl-3.5 text-sm font-mono text-gray-400 select-none">MEM-</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={lookupVal}
+                  onChange={handleLookupChange}
+                  onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+                  className="flex-1 bg-transparent border-none outline-none px-1 py-2.5 text-sm font-mono text-gym-dark"
+                />
+              </div>
+              <button onClick={handleLookup} className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 whitespace-nowrap">
                 <Search size={13} /> Look up
               </button>
             </div>
@@ -334,7 +406,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
 
           {/* Walk-in button */}
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-            <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Walk-in / guest</div>
+            <div className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase mb-2 font-inter">Walk-in / guest</div>
             <div className="flex gap-2.5">
               <input type="text" placeholder="Guest name (optional)" value={walkInName} onChange={(e) => setWalkInName(e.target.value)}
                 className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-inter text-gym-dark outline-none focus:border-gym-lime transition-colors" />
@@ -400,7 +472,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <div className="flex flex-col lg:flex-row gap-2.5">
               <button
                 onClick={async () => {
-                  await confirmPayment(checkinResult.member!.memberId, rate);
+                  const ok = await confirmPayment(checkinResult.member!.memberId, rate);
+                  if (ok === false) return; // already_checked_in handled inside
                   setMemberDailyRate(null);
                   recordOutcome("ok", "Payment recorded", `Daily visit · ₱${rate} · ${checkinResult.member!.fullName} · attendance logged`);
                 }}
@@ -541,18 +614,22 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           )}
           <div className="border-t border-black/8 pt-5">
             <div className="text-[11px] font-semibold text-gray-400 tracking-[0.07em] uppercase mb-2.5 font-inter">Search by Member ID</div>
-            <div className="flex gap-2.5 mb-3.5">
-              <input
-                type="text"
-                placeholder="MEM-000000"
-                value={lookupVal}
-                onChange={(e) => setLookupVal(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-                className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-mono text-gym-dark outline-none focus:border-gym-lime transition-colors"
-              />
+            <div className="flex gap-2.5 items-center mb-3.5">
+              <div className="flex items-center flex-1 bg-gray-50 border border-black/14 rounded-lg overflow-hidden focus-within:border-gym-lime transition-colors">
+                <span className="pl-3.5 text-sm font-mono text-gray-400 select-none">MEM-</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000000"
+                  value={lookupVal}
+                  onChange={handleLookupChange}
+                  onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+                  className="flex-1 bg-transparent border-none outline-none px-1 py-2.5 text-sm font-mono text-gym-dark"
+                />
+              </div>
               <button
                 onClick={handleLookup}
-                className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90"
+                className="flex items-center gap-1.5 px-4.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 whitespace-nowrap"
               >
                 <Search size={13} /> Search
               </button>
@@ -562,6 +639,42 @@ export function ScannerView({ onToast }: ScannerViewProps) {
               <RefreshCw size={15} /> Back to scanner
             </button>
           </div>
+        </ScanCard>
+      )}
+
+      {/* ── RES DUPLICATE — already checked in today ── */}
+      {state === "res-duplicate" && checkinResult?.member && (
+        <ScanCard borderColor="rgba(99,102,241,0.3)">
+          <div className="text-center pb-5.5 border-b border-black/8 mb-5.5">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={34} className="text-indigo-500" strokeWidth={2} />
+            </div>
+            <div className="font-space font-bold text-2xl text-indigo-500 tracking-tight mb-1">Already checked in</div>
+            <div className="text-sm text-gray-400 font-inter">
+              {checkinResult.checkedInAt
+                ? `Logged today at ${new Date(checkinResult.checkedInAt).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`
+                : "Already logged for today"}
+            </div>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5.5">
+            <div className="flex items-center gap-3.5">
+              <InitialsAvatar name={checkinResult.member.fullName} />
+              <div className="flex-1">
+                <div className="font-space font-bold text-[17px] text-gym-dark">{checkinResult.member.fullName}</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">{checkinResult.member.memberId}</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3.5 mb-5 font-inter">
+            <CheckCircle size={15} className="text-indigo-500 shrink-0 mt-0.5" />
+            <span className="text-[14px] text-indigo-700 leading-snug">
+              This member&apos;s attendance has already been recorded today. No duplicate entry will be created.
+            </span>
+          </div>
+          <button onClick={() => { setCheckinResult(null); setLookupVal(""); setWalkInName(""); go("ready"); }}
+            className="w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+            <QrCode size={16} /> Scan next member
+          </button>
         </ScanCard>
       )}
 

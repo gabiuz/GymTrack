@@ -33,6 +33,27 @@ export async function POST(req: NextRequest) {
 
     const now = new Date()
 
+    // ── Duplicate check: has this member already checked in today?
+    const todayStart = new Date(now)
+    todayStart.setHours(0, 0, 0, 0)
+    const todayEnd = new Date(now)
+    todayEnd.setHours(23, 59, 59, 999)
+
+    const existingToday = await prisma.attendance.findFirst({
+      where: {
+        memberId: member.id,
+        checkInTime: { gte: todayStart, lte: todayEnd },
+      },
+    })
+
+    if (existingToday) {
+      return NextResponse.json({
+        status: 'already_checked_in',
+        member: { id: member.id, memberId: member.memberId, fullName: member.fullName, photoUrl: member.photoUrl },
+        checkedInAt: existingToday.checkInTime.toISOString(),
+      })
+    }
+
     // ── Step 2: Check for active MonthlyPlan
     const activePlan = await prisma.monthlyPlan.findFirst({
       where: {

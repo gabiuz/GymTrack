@@ -13,16 +13,17 @@ import { StatusPill } from "@/features/owner/_ui";
 type ScanState =
   | "perm" | "blocked" | "ready" | "loading"
   | "res-a" | "res-b" | "res-c" | "res-d"
-  | "res-guest" | "res-invalid" | "outcome";
+  | "res-guest" | "res-invalid" | "res-duplicate" | "outcome";
 
 interface OutcomeData { kind: "ok" | "deny"; title: string; sub: string; }
 
 interface CheckinResult {
-  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned";
+  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned" | "already_checked_in";
   member?: { id: number; memberId: string; fullName: string; photoUrl: string | null };
   rate?: number;
   planEndDate?: string;
   membershipEndDate?: string;
+  checkedInAt?: string;
 }
 
 interface ScannerViewProps { onToast: (title: string, sub: string) => void; }
@@ -77,6 +78,9 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [idSuffix, setIdSuffix] = useState("");
   const [walkInName, setWalkInName] = useState("");
   const [guestName, setGuestName]   = useState("");
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameras, setCameras]         = useState<MediaDeviceInfo[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerInstance = useRef<any>(null);
@@ -84,19 +88,32 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const go = (s: ScanState) => setState(s);
 
   // ── Camera ───────────────────────────────────────────────────────────────
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (cameraId?: string | null) => {
     if (!scannerRef.current) return;
+    setCameraReady(false);
+    const cameraConstraint: MediaTrackConstraints = cameraId
+      ? { deviceId: { exact: cameraId } }
+      : { facingMode: "environment" };
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
       const qr = new Html5Qrcode("owner-qr-reader");
       scannerInstance.current = qr;
       await qr.start(
-        { facingMode: "environment" },
+        cameraConstraint,
         { fps: 10, qrbox: { width: 220, height: 220 } },
         (text) => { void doCheckin(text); },
         () => {}
       );
+      setCameraReady(true);
+      // Enumerate after permission granted so labels are populated
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        setCameras(videoDevices);
+        if (!cameraId && videoDevices.length > 0) setActiveCameraId(videoDevices[0].deviceId);
+      }
     } catch {
+      setCameraReady(false);
       go("blocked");
     }
   }, []);
@@ -105,10 +122,17 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     try { await scannerInstance.current?.stop(); } catch {}
     try { scannerInstance.current?.clear?.(); } catch {}
     scannerInstance.current = null;
+    setCameraReady(false);
   }, []);
 
+  const handleCameraChange = useCallback(async (deviceId: string) => {
+    setActiveCameraId(deviceId);
+    await stopCamera();
+    await startCamera(deviceId);
+  }, [stopCamera, startCamera]);
+
   useEffect(() => {
-    if (state === "ready") startCamera();
+    if (state === "ready") startCamera(activeCameraId ?? undefined);
     else stopCamera();
     return () => { void stopCamera(); };
   }, [state]);
@@ -133,12 +157,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       setResult(data);
 
       switch (data.status) {
-        case "monthly_active": go("res-c"); break;
-        case "member_daily":   go("res-b"); break;
-        case "expired":        go("res-d"); break;
-        case "unassigned":     go("res-a"); break;
-        case "guest":          go("res-guest"); break;
-        default:               go("res-invalid");
+        case "monthly_active":    go("res-c"); break;
+        case "member_daily":      go("res-b"); break;
+        case "expired":           go("res-d"); break;
+        case "unassigned":        go("res-a"); break;
+        case "guest":             go("res-guest"); break;
+        case "already_checked_in": go("res-duplicate"); break;
+        default:                  go("res-invalid");
       }
     } catch {
       go("res-invalid");
@@ -157,6 +182,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           amount,
         }),
       });
+      if (res.status === 409) {
+        // Already checked in today — show duplicate modal
+        const errData = await res.json();
+        setResult((prev) => prev ? { ...prev, checkedInAt: errData.checkedInAt } : prev);
+        go("res-duplicate");
+        return;
+      }
       if (!res.ok) {
         recordOutcome("deny", "Error recording", "Could not save — try again");
         return;
@@ -265,24 +297,47 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       {/* ── READY TO SCAN ── */}
       {state === "ready" && (
         <div className="max-w-[580px] mx-auto flex flex-col gap-3.5">
-          <div className="relative h-[220px] bg-gray-900 border border-black/8 rounded-2xl flex flex-col items-center justify-center gap-2.5 overflow-hidden">
+          {/* Viewfinder with real camera — matches admin scanner structure exactly */}
+          <div className="relative bg-gray-50 border border-black/8 rounded-2xl overflow-hidden">
+            {/* Corner brackets */}
             {[
               { top: 14, left: 14, borderTop: "2.5px solid #C5FF00", borderLeft: "2.5px solid #C5FF00", borderRadius: "4px 0 0 0" },
               { top: 14, right: 14, borderTop: "2.5px solid #C5FF00", borderRight: "2.5px solid #C5FF00", borderRadius: "0 4px 0 0" },
               { bottom: 14, left: 14, borderBottom: "2.5px solid #C5FF00", borderLeft: "2.5px solid #C5FF00", borderRadius: "0 0 0 4px" },
               { bottom: 14, right: 14, borderBottom: "2.5px solid #C5FF00", borderRight: "2.5px solid #C5FF00", borderRadius: "0 0 4px 0" },
-            ].map((s, i) => <div key={i} style={{ position: "absolute", width: 24, height: 24, ...s }} />)}
-            <div style={{ position: "absolute", left: 44, right: 44, height: 2, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
-            <div id="owner-qr-reader" ref={scannerRef} className="absolute inset-0" />
-            {!scannerInstance.current && (
-              <>
-                <QrCode size={36} className="text-white/20 relative z-10" />
-                <span className="text-[13px] text-white/40 font-inter relative z-10">Initialising camera…</span>
-              </>
-            )}
+            ].map((s, i) => <div key={i} style={{ position: "absolute", width: 24, height: 24, zIndex: 10, ...s }} />)}
+            {/* Scan line */}
+            <div style={{ position: "absolute", left: 44, right: 44, height: 2, zIndex: 10, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
+            {/* html5-qrcode mounts the camera here — normal flow, not absolute */}
+            <div id="owner-qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: 220 }} />
           </div>
 
+          {/* Camera selector — shown once 2+ cameras are detected */}
+          {cameras.length > 1 && (
+            <div className="bg-white border border-black/8 rounded-xl px-4 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] flex items-center gap-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter shrink-0">Camera</span>
+              <select
+                value={activeCameraId ?? ""}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[13px] text-gym-dark font-inter cursor-pointer min-w-0"
+              >
+                {cameras.map((cam, i) => {
+                  const label = cam.label
+                    ? (/front|user|facing front/i.test(cam.label) ? "Front Camera"
+                      : /back|rear|environment|facing back/i.test(cam.label) ? "Back Camera"
+                      : cam.label.length > 40 ? cam.label.slice(0, 37) + "…" : cam.label)
+                    : `Camera ${i + 1}`;
+                  return <option key={cam.deviceId} value={cam.deviceId}>{label}</option>;
+                })}
+              </select>
+            </div>
+          )}
+
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+
             <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>
             {ManualLookup}
             <div className="mt-3.5 pt-3.5 border-t border-black/8">
@@ -476,6 +531,42 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <div className="text-[11px] font-semibold text-gray-400 tracking-[0.07em] uppercase mb-2.5 font-inter">Enter Member ID manually</div>
             {ManualLookup}
           </div>
+        </ScanCard>
+      )}
+
+      {/* ── RES DUPLICATE — already checked in today ── */}
+      {state === "res-duplicate" && result?.member && (
+        <ScanCard borderColor="rgba(99,102,241,0.3)">
+          <div className="text-center pb-5.5 border-b border-black/8 mb-5.5">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={34} className="text-indigo-500" strokeWidth={2} />
+            </div>
+            <div className="font-space font-bold text-2xl text-indigo-500 tracking-tight mb-1">Already checked in</div>
+            <div className="text-sm text-gray-400 font-inter">
+              {result.checkedInAt
+                ? `Logged today at ${new Date(result.checkedInAt).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`
+                : "Already logged for today"}
+            </div>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5.5">
+            <div className="flex items-center gap-3.5">
+              <InitialsAvatar name={result.member.fullName} />
+              <div className="flex-1">
+                <div className="font-space font-bold text-[17px] text-gym-dark">{result.member.fullName}</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">{result.member.memberId}</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3.5 mb-5 font-inter">
+            <CheckCircle size={15} className="text-indigo-500 shrink-0 mt-0.5" />
+            <span className="text-[14px] text-indigo-700 leading-snug">
+              This member&apos;s attendance has already been recorded today. No duplicate entry will be created.
+            </span>
+          </div>
+          <button onClick={() => { setResult(null); setIdSuffix(""); setWalkInName(""); go("ready"); }}
+            className="w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+            <QrCode size={16} /> Scan next member
+          </button>
         </ScanCard>
       )}
 
