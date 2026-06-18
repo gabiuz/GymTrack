@@ -13,16 +13,17 @@ import { StatusPill } from "@/features/owner/_ui";
 type ScanState =
   | "perm" | "blocked" | "ready" | "loading"
   | "res-a" | "res-b" | "res-c" | "res-d"
-  | "res-guest" | "res-invalid" | "outcome";
+  | "res-guest" | "res-invalid" | "res-duplicate" | "outcome";
 
 interface OutcomeData { kind: "ok" | "deny"; title: string; sub: string; }
 
 interface CheckinResult {
-  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned";
+  status: "monthly_active" | "member_daily" | "guest" | "expired" | "unassigned" | "already_checked_in";
   member?: { id: number; memberId: string; fullName: string; photoUrl: string | null };
   rate?: number;
   planEndDate?: string;
   membershipEndDate?: string;
+  checkedInAt?: string;
 }
 
 interface ScannerViewProps { onToast: (title: string, sub: string) => void; }
@@ -133,12 +134,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       setResult(data);
 
       switch (data.status) {
-        case "monthly_active": go("res-c"); break;
-        case "member_daily":   go("res-b"); break;
-        case "expired":        go("res-d"); break;
-        case "unassigned":     go("res-a"); break;
-        case "guest":          go("res-guest"); break;
-        default:               go("res-invalid");
+        case "monthly_active":    go("res-c"); break;
+        case "member_daily":      go("res-b"); break;
+        case "expired":           go("res-d"); break;
+        case "unassigned":        go("res-a"); break;
+        case "guest":             go("res-guest"); break;
+        case "already_checked_in": go("res-duplicate"); break;
+        default:                  go("res-invalid");
       }
     } catch {
       go("res-invalid");
@@ -157,6 +159,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
           amount,
         }),
       });
+      if (res.status === 409) {
+        // Already checked in today — show duplicate modal
+        const errData = await res.json();
+        setResult((prev) => prev ? { ...prev, checkedInAt: errData.checkedInAt } : prev);
+        go("res-duplicate");
+        return;
+      }
       if (!res.ok) {
         recordOutcome("deny", "Error recording", "Could not save — try again");
         return;
@@ -476,6 +485,42 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <div className="text-[11px] font-semibold text-gray-400 tracking-[0.07em] uppercase mb-2.5 font-inter">Enter Member ID manually</div>
             {ManualLookup}
           </div>
+        </ScanCard>
+      )}
+
+      {/* ── RES DUPLICATE — already checked in today ── */}
+      {state === "res-duplicate" && result?.member && (
+        <ScanCard borderColor="rgba(99,102,241,0.3)">
+          <div className="text-center pb-5.5 border-b border-black/8 mb-5.5">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={34} className="text-indigo-500" strokeWidth={2} />
+            </div>
+            <div className="font-space font-bold text-2xl text-indigo-500 tracking-tight mb-1">Already checked in</div>
+            <div className="text-sm text-gray-400 font-inter">
+              {result.checkedInAt
+                ? `Logged today at ${new Date(result.checkedInAt).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}`
+                : "Already logged for today"}
+            </div>
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5.5">
+            <div className="flex items-center gap-3.5">
+              <InitialsAvatar name={result.member.fullName} />
+              <div className="flex-1">
+                <div className="font-space font-bold text-[17px] text-gym-dark">{result.member.fullName}</div>
+                <div className="text-xs text-gray-400 font-mono mt-0.5">{result.member.memberId}</div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-start gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3.5 mb-5 font-inter">
+            <CheckCircle size={15} className="text-indigo-500 shrink-0 mt-0.5" />
+            <span className="text-[14px] text-indigo-700 leading-snug">
+              This member&apos;s attendance has already been recorded today. No duplicate entry will be created.
+            </span>
+          </div>
+          <button onClick={() => { setResult(null); setIdSuffix(""); setWalkInName(""); go("ready"); }}
+            className="w-full flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+            <QrCode size={16} /> Scan next member
+          </button>
         </ScanCard>
       )}
 

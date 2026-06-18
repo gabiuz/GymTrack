@@ -42,8 +42,21 @@ export async function POST(req: NextRequest) {
       memberNumericId = member.id
     }
 
-    // Create Payment + Attendance atomically
     const result = await prisma.$transaction(async (tx) => {
+      // Guard: no duplicate attendance for the same member on the same day
+      if (memberNumericId) {
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        const todayEnd = new Date()
+        todayEnd.setHours(23, 59, 59, 999)
+        const existing = await tx.attendance.findFirst({
+          where: { memberId: memberNumericId, checkInTime: { gte: todayStart, lte: todayEnd } },
+        })
+        if (existing) {
+          return { duplicate: true, checkedInAt: existing.checkInTime.toISOString() }
+        }
+      }
+
       const payment = await tx.payment.create({
         data: {
           memberId: memberNumericId,
@@ -66,6 +79,13 @@ export async function POST(req: NextRequest) {
 
       return { payment, attendance }
     })
+
+    if ('duplicate' in result && result.duplicate) {
+      return NextResponse.json(
+        { error: 'already_checked_in', checkedInAt: result.checkedInAt },
+        { status: 409 }
+      )
+    }
 
     return NextResponse.json({ data: result }, { status: 201 })
   } catch (error) {
