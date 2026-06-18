@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { requireOwnerSession } from '@/lib/auth'
+import { z } from 'zod'
+
+const MonthlyPlanSchema = z.object({
+  memberId: z.number().int().positive(),
+  duration: z.union([z.literal(1), z.literal(3), z.literal(6), z.literal(12)]),
+  amount: z.number().positive(),
+})
+
+// ─── POST /api/owner/monthly-plans ──────────────────────────────────────────
+export async function POST(req: NextRequest) {
+  try {
+    const session = await requireOwnerSession(req)
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const body = await req.json()
+    const parsed = MonthlyPlanSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 })
+
+    const { memberId, duration, amount } = parsed.data
+
+    const member = await prisma.member.findUnique({ where: { id: memberId }, select: { id: true } })
+    if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+
+    const startDate = new Date()
+    const endDate = new Date(startDate)
+    endDate.setMonth(endDate.getMonth() + duration)
+
+    const result = await prisma.$transaction(async (tx) => {
+      const plan = await tx.monthlyPlan.create({ data: { memberId, duration, amount, startDate, endDate } })
+      const payment = await tx.payment.create({
+        data: { memberId, staffId: session.userId, paymentType: 'monthly_plan', amount },
+      })
+      return { plan, payment }
+    })
+
+    return NextResponse.json({ data: result }, { status: 201 })
+  } catch (error) {
+    console.error('[POST /api/owner/monthly-plans]', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

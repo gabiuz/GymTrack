@@ -1,0 +1,140 @@
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// USERS
+
+model User {
+  id                  Int          @id @default(autoincrement())
+  role                String       // owner | staff | customer
+  password            String
+  name                String
+  isActive            Boolean      @default(true)
+
+  username            String?      @unique
+  email               String?      @unique
+
+  resetToken          String?      @unique
+  resetTokenExpiry    DateTime?
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  member              Member?
+
+  paymentsRecorded    Payment[]
+  attendanceRecorded  Attendance[]
+}
+
+// MEMBERS
+
+model Member {
+  id                 Int            @id @default(autoincrement())
+
+  memberId           String         @unique // MEM-000001
+  userId             Int?           @unique
+  user               User?          @relation(fields: [userId], references: [id])
+
+  fullName           String
+  contactNumber      String         @unique
+  address            String
+  gender             String         // male | female | other
+
+  dateOfBirth        DateTime?
+  emergencyContact   String?
+
+  photoUrl           String?
+  qrCode             String?        // Cloudinary URL
+
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  memberships        Membership[]
+  monthlyPlans       MonthlyPlan[]
+  payments           Payment[]
+  attendance         Attendance[]
+}
+
+// MEMBERSHIP (₱200 YEARLY)
+
+model Membership {
+  id          Int          @id @default(autoincrement())
+
+  memberId    Int
+  member      Member       @relation(fields: [memberId], references: [id])
+
+  startDate   DateTime
+  endDate     DateTime
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// MONTHLY PLANS
+
+model MonthlyPlan {
+  id          Int          @id @default(autoincrement())
+
+  memberId    Int
+  member      Member       @relation(fields: [memberId], references: [id])
+
+  duration    Int          // 1, 3, 6, 12 months
+  amount      Decimal      @db.Decimal(10, 2)
+
+  startDate   DateTime
+  endDate     DateTime
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// PAYMENTS
+
+model Payment {
+  id              Int          @id @default(autoincrement())
+
+  // Nullable for walk-ins
+  memberId        Int?
+  member          Member?      @relation(fields: [memberId], references: [id])
+
+  // Used only for non-members
+  walkInName      String?
+
+  staffId         Int
+  staff           User         @relation(fields: [staffId], references: [id])
+
+  paymentType     String       // membership_fee | daily_visit | monthly_plan
+
+  amount          Decimal      @db.Decimal(10, 2)
+
+  receiptNumber   String       @unique @default(cuid())
+
+  paymentDate     DateTime     @default(now())
+
+  notes           String?
+}
+
+// ATTENDANCE
+
+model Attendance {
+  id          Int      @id @default(autoincrement())
+
+  memberId    Int?
+  member      Member?  @relation(fields: [memberId], references: [id])
+  walkInName  String?  // for non-members
+
+  staffId     Int
+  staff       User     @relation(fields: [staffId], references: [id])
+
+  checkInTime DateTime @default(now())
+  visitType   String   // daily | monthly_plan
+
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
