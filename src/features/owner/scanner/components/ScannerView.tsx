@@ -78,6 +78,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [idSuffix, setIdSuffix] = useState("");
   const [walkInName, setWalkInName] = useState("");
   const [guestName, setGuestName]   = useState("");
+  const [cameraReady, setCameraReady] = useState(false);
   const scannerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerInstance = useRef<any>(null);
@@ -87,6 +88,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   // ── Camera ───────────────────────────────────────────────────────────────
   const startCamera = useCallback(async () => {
     if (!scannerRef.current) return;
+    setCameraReady(false);
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
       const qr = new Html5Qrcode("owner-qr-reader");
@@ -97,7 +99,9 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         (text) => { void doCheckin(text); },
         () => {}
       );
+      setCameraReady(true);
     } catch {
+      setCameraReady(false);
       go("blocked");
     }
   }, []);
@@ -106,6 +110,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     try { await scannerInstance.current?.stop(); } catch {}
     try { scannerInstance.current?.clear?.(); } catch {}
     scannerInstance.current = null;
+    setCameraReady(false);
   }, []);
 
   useEffect(() => {
@@ -274,22 +279,21 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       {/* ── READY TO SCAN ── */}
       {state === "ready" && (
         <div className="max-w-[580px] mx-auto flex flex-col gap-3.5">
-          <div className="relative h-[220px] bg-gray-900 border border-black/8 rounded-2xl flex flex-col items-center justify-center gap-2.5 overflow-hidden">
+          {/* Viewfinder with real camera — matches admin scanner structure exactly */}
+          <div className="relative bg-gray-50 border border-black/8 rounded-2xl overflow-hidden">
+            {/* Corner brackets */}
             {[
               { top: 14, left: 14, borderTop: "2.5px solid #C5FF00", borderLeft: "2.5px solid #C5FF00", borderRadius: "4px 0 0 0" },
               { top: 14, right: 14, borderTop: "2.5px solid #C5FF00", borderRight: "2.5px solid #C5FF00", borderRadius: "0 4px 0 0" },
               { bottom: 14, left: 14, borderBottom: "2.5px solid #C5FF00", borderLeft: "2.5px solid #C5FF00", borderRadius: "0 0 0 4px" },
               { bottom: 14, right: 14, borderBottom: "2.5px solid #C5FF00", borderRight: "2.5px solid #C5FF00", borderRadius: "0 0 4px 0" },
-            ].map((s, i) => <div key={i} style={{ position: "absolute", width: 24, height: 24, ...s }} />)}
-            <div style={{ position: "absolute", left: 44, right: 44, height: 2, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
-            <div id="owner-qr-reader" ref={scannerRef} className="absolute inset-0" />
-            {!scannerInstance.current && (
-              <>
-                <QrCode size={36} className="text-white/20 relative z-10" />
-                <span className="text-[13px] text-white/40 font-inter relative z-10">Initialising camera…</span>
-              </>
-            )}
+            ].map((s, i) => <div key={i} style={{ position: "absolute", width: 24, height: 24, zIndex: 10, ...s }} />)}
+            {/* Scan line */}
+            <div style={{ position: "absolute", left: 44, right: 44, height: 2, zIndex: 10, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
+            {/* html5-qrcode mounts the camera here — normal flow, not absolute */}
+            <div id="owner-qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: 220 }} />
           </div>
+
 
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
             <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>

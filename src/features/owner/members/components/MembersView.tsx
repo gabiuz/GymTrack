@@ -57,7 +57,7 @@ export function MembersView({ onToast }: MembersViewProps) {
     fetch(`/api/members?search=${encodeURIComponent(q)}&limit=50`)
       .then((r) => r.json())
       .then((d) => {
-        const rows: MemberRow[] = d.members ?? [];
+        const rows: MemberRow[] = d.data ?? [];
         setMembers(rows);
         if (!selectedId && rows.length > 0) setSelectedId(rows[0].memberId);
       })

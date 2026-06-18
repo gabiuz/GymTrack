@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   QrCode,
   Users,
@@ -39,10 +39,39 @@ interface AdminShellProps {
 
 export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [toast, setToast] = useState({ show: false, title: "", subtitle: "" });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userName, setUserName] = useState<string>("");
+  const [userRole, setUserRole] = useState<string>("");
 
   const pageTitle = sectionTitles[pathname] ?? "Admin";
+
+  // Fetch the logged-in user's name from the session
+  useEffect(() => {
+    fetch("/api/auth/admin-me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.name) {
+          setUserName(d.name);
+          setUserRole(d.role === "owner" ? "Owner" : "Staff");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const firstName = userName.split(" ")[0] || "Staff";
+  const initials = userName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "ST";
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    router.push("/admin/login");
+  }
 
   return (
     <div className="min-h-screen flex bg-gym-gray-bg font-inter">
@@ -113,25 +142,24 @@ export function AdminShell({ children }: AdminShellProps) {
 
         {/* User / sign-out */}
         <div className="border-t border-black/8 p-3.5">
-          <Link
-            href="/admin/login"
-            onClick={() => setMobileOpen(false)}
-            className="flex items-center gap-2.5 cursor-pointer group"
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 cursor-pointer group w-full text-left bg-transparent border-none p-0"
           >
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 shrink-0">
-              <User size={15} />
+            <div className="w-8 h-8 rounded-full bg-gym-dark flex items-center justify-center text-gym-lime shrink-0 text-[10px] font-bold font-space">
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-semibold text-gym-dark font-inter">
-                Staff User
+              <div className="text-[13px] font-semibold text-gym-dark font-inter truncate">
+                {firstName}
               </div>
-              <div className="text-[11px] text-gray-400 font-inter">Admin</div>
+              <div className="text-[11px] text-gray-400 font-inter">{userRole || "Staff"}</div>
             </div>
             <LogOut
               size={14}
               className="text-gray-300 group-hover:text-gray-500 transition-colors"
             />
-          </Link>
+          </button>
         </div>
       </aside>
 
@@ -148,11 +176,27 @@ export function AdminShell({ children }: AdminShellProps) {
           <span className="font-space font-bold text-xl tracking-tight text-gym-dark">
             {pageTitle}
           </span>
-          <div className="ml-auto flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-gym-lime shadow-[0_0_0_3px_rgba(200,255,0,0.25)]" />
-            <span className="text-xs text-gray-400 font-inter hidden sm:inline">
-              gymtrack.app/admin
-            </span>
+          <div className="ml-auto flex items-center gap-2.5">
+            <div className="hidden sm:flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-gym-lime shadow-[0_0_0_3px_rgba(200,255,0,0.25)]" />
+              <span className="text-xs text-gray-400 font-inter">
+                gymtrack.app/admin
+              </span>
+            </div>
+            {/* User pill */}
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="flex items-center gap-1.5 bg-gray-50 border border-black/10 rounded-full px-2.5 py-1 cursor-pointer hover:bg-gray-100 transition-colors"
+            >
+              <div className="w-5 h-5 rounded-full bg-gym-dark flex items-center justify-center text-gym-lime text-[8px] font-bold font-space">
+                {initials}
+              </div>
+              <span className="text-xs font-semibold font-inter text-gym-dark hidden sm:inline">
+                {firstName}
+              </span>
+              <LogOut size={12} className="text-gray-400" />
+            </button>
           </div>
         </header>
 
