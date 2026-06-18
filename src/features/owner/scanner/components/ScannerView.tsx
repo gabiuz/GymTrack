@@ -79,6 +79,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [walkInName, setWalkInName] = useState("");
   const [guestName, setGuestName]   = useState("");
   const [cameraReady, setCameraReady] = useState(false);
+  const [cameras, setCameras]         = useState<MediaDeviceInfo[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
   const scannerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerInstance = useRef<any>(null);
@@ -86,20 +88,30 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const go = (s: ScanState) => setState(s);
 
   // ── Camera ───────────────────────────────────────────────────────────────
-  const startCamera = useCallback(async () => {
+  const startCamera = useCallback(async (cameraId?: string | null) => {
     if (!scannerRef.current) return;
     setCameraReady(false);
+    const cameraConstraint: MediaTrackConstraints = cameraId
+      ? { deviceId: { exact: cameraId } }
+      : { facingMode: "environment" };
     try {
       const { Html5Qrcode } = await import("html5-qrcode");
       const qr = new Html5Qrcode("owner-qr-reader");
       scannerInstance.current = qr;
       await qr.start(
-        { facingMode: "environment" },
+        cameraConstraint,
         { fps: 10, qrbox: { width: 220, height: 220 } },
         (text) => { void doCheckin(text); },
         () => {}
       );
       setCameraReady(true);
+      // Enumerate after permission granted so labels are populated
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        setCameras(videoDevices);
+        if (!cameraId && videoDevices.length > 0) setActiveCameraId(videoDevices[0].deviceId);
+      }
     } catch {
       setCameraReady(false);
       go("blocked");
@@ -113,8 +125,14 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     setCameraReady(false);
   }, []);
 
+  const handleCameraChange = useCallback(async (deviceId: string) => {
+    setActiveCameraId(deviceId);
+    await stopCamera();
+    await startCamera(deviceId);
+  }, [stopCamera, startCamera]);
+
   useEffect(() => {
-    if (state === "ready") startCamera();
+    if (state === "ready") startCamera(activeCameraId ?? undefined);
     else stopCamera();
     return () => { void stopCamera(); };
   }, [state]);
@@ -294,8 +312,32 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <div id="owner-qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: 220 }} />
           </div>
 
+          {/* Camera selector — shown once 2+ cameras are detected */}
+          {cameras.length > 1 && (
+            <div className="bg-white border border-black/8 rounded-xl px-4 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] flex items-center gap-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter shrink-0">Camera</span>
+              <select
+                value={activeCameraId ?? ""}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[13px] text-gym-dark font-inter cursor-pointer min-w-0"
+              >
+                {cameras.map((cam, i) => {
+                  const label = cam.label
+                    ? (/front|user|facing front/i.test(cam.label) ? "Front Camera"
+                      : /back|rear|environment|facing back/i.test(cam.label) ? "Back Camera"
+                      : cam.label.length > 40 ? cam.label.slice(0, 37) + "…" : cam.label)
+                    : `Camera ${i + 1}`;
+                  return <option key={cam.deviceId} value={cam.deviceId}>{label}</option>;
+                })}
+              </select>
+            </div>
+          )}
 
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
+
             <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>
             {ManualLookup}
             <div className="mt-3.5 pt-3.5 border-t border-black/8">

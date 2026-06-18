@@ -96,6 +96,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [lookupError, setLookupError] = useState("");
   // Override rate used when an unassigned member does a daily visit (₱75 instead of member ₱70)
   const [memberDailyRate, setMemberDailyRate] = useState<number | null>(null);
+  const [cameras, setCameras]         = useState<MediaDeviceInfo[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
 
   const scannerRef = useRef<HTMLDivElement>(null);
   // We store the scanner instance in a ref to avoid it affecting render
@@ -190,7 +192,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     }
   }, []);
 
-  const startScanner = useCallback(async () => {
+  const startScanner = useCallback(async (cameraId?: string | null) => {
     if (!scannerRef.current) return;
     await stopScanner();
 
@@ -198,25 +200,41 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     const scanner = new Html5Qrcode("qr-reader");
     html5QrRef.current = scanner;
 
+    // Use specific deviceId if provided, otherwise prefer back/environment camera
+    const cameraConstraint: MediaTrackConstraints = cameraId
+      ? { deviceId: { exact: cameraId } }
+      : { facingMode: "environment" };
+
     try {
       await scanner.start(
-        { facingMode: "environment" },
+        cameraConstraint,
         { fps: 10, qrbox: { width: 200, height: 200 } },
         (decodedText) => {
-          // Pause scanner on successful decode
           stopScanner();
           doCheckin(decodedText.trim());
         },
         () => { /* quiet scan errors */ }
       );
+      // After permission granted, enumerate devices (labels are only available post-permission)
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter((d) => d.kind === "videoinput");
+        setCameras(videoDevices);
+        if (!cameraId && videoDevices.length > 0) setActiveCameraId(videoDevices[0].deviceId);
+      }
     } catch {
       go("blocked");
     }
   }, [stopScanner, doCheckin]);
 
+  const handleCameraChange = useCallback(async (deviceId: string) => {
+    setActiveCameraId(deviceId);
+    await startScanner(deviceId);
+  }, [startScanner]);
+
   useEffect(() => {
     if (state === "ready") {
-      startScanner();
+      startScanner(activeCameraId ?? undefined);
     } else {
       stopScanner();
     }
@@ -334,20 +352,39 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             ].map((s, i) => (
               <div key={i} style={{ position: "absolute", width: 24, height: 24, zIndex: 10, ...s }} />
             ))}
-            <div
-              style={{
-                position: "absolute", left: 44, right: 44, height: 2, zIndex: 10,
-                background: "#C5FF00", opacity: 0.8, top: "18%",
-                animation: "spscan 2s ease-in-out infinite", borderRadius: 1,
-              }}
-            />
+            <div style={{ position: "absolute", left: 44, right: 44, height: 2, zIndex: 10, background: "#C5FF00", opacity: 0.8, top: "18%", animation: "spscan 2s ease-in-out infinite", borderRadius: 1 }} />
             {/* html5-qrcode mounts the camera here */}
             <div id="qr-reader" ref={scannerRef} className="w-full" style={{ minHeight: 220 }} />
           </div>
 
+
+          {/* Camera selector — shown once 2+ cameras are detected */}
+          {cameras.length > 1 && (
+            <div className="bg-white border border-black/8 rounded-xl px-4 py-3 shadow-[0_1px_4px_rgba(0,0,0,0.05)] flex items-center gap-2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter shrink-0">Camera</span>
+              <select
+                value={activeCameraId ?? ""}
+                onChange={(e) => handleCameraChange(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[13px] text-gym-dark font-inter cursor-pointer min-w-0"
+              >
+                {cameras.map((cam, i) => {
+                  const label = cam.label
+                    ? (/front|user|facing front/i.test(cam.label) ? "Front Camera"
+                      : /back|rear|environment|facing back/i.test(cam.label) ? "Back Camera"
+                      : cam.label.length > 40 ? cam.label.slice(0, 37) + "…" : cam.label)
+                    : `Camera ${i + 1}`;
+                  return <option key={cam.deviceId} value={cam.deviceId}>{label}</option>;
+                })}
+              </select>
+            </div>
+          )}
+
           {/* Manual lookup */}
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-            <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Or enter Member ID manually</div>
+            <div className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase mb-2 font-inter">Or enter Member ID manually</div>
             <div className="flex gap-2.5 items-center">
               <div className="flex items-center flex-1 bg-gray-50 border border-black/14 rounded-lg overflow-hidden focus-within:border-gym-lime transition-colors">
                 <span className="pl-3.5 text-sm font-mono text-gray-400 select-none">MEM-</span>
@@ -369,7 +406,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
 
           {/* Walk-in button */}
           <div className="bg-white border border-black/8 rounded-xl px-4.5 py-4 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-            <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">Walk-in / guest</div>
+            <div className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase mb-2 font-inter">Walk-in / guest</div>
             <div className="flex gap-2.5">
               <input type="text" placeholder="Guest name (optional)" value={walkInName} onChange={(e) => setWalkInName(e.target.value)}
                 className="flex-1 bg-gray-50 border border-black/14 rounded-lg px-3.5 py-2.5 text-sm font-inter text-gym-dark outline-none focus:border-gym-lime transition-colors" />
