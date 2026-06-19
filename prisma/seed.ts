@@ -11,7 +11,7 @@
  *    spread across today, the last 7 days, last 30 days, and last year.
  */
 
-import { PrismaClient } from '../src/generated/prisma'
+import { PrismaClient, Prisma } from '../src/generated/prisma'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
@@ -64,7 +64,11 @@ const ADDRESSES = [
 const GENDERS = ['male', 'female', 'other'] as const
 
 async function main() {
-  console.log('🌱  Starting seed…')
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Seed cannot be run in production')
+  }
+
+  console.log('🔄 Starting seed...')
 
   console.log('🧹  Cleaning up database...')
   await prisma.attendance.deleteMany()
@@ -276,7 +280,7 @@ async function main() {
   console.log(`✅  Payments: ${paymentRows.length} created`)
 
   // ── 7. Attendance ──────────────────────────────────────────────────────────
-  const attendanceRows: Parameters<typeof prisma.attendance.createMany>[0]['data'] = []
+  const attendanceRows: Prisma.AttendanceCreateManyInput[] = []
 
   // TODAY — all 30 members check in today
   for (const member of members) {

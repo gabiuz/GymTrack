@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
-    const range = searchParams.get('range') ?? 'month'
+    let range = searchParams.get('range') ?? 'month'
+    if (!['week', 'month', 'year'].includes(range)) {
+      range = 'month'
+    }
 
     const now = new Date()
     const subDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() - n); return x }
@@ -22,7 +25,7 @@ export async function GET(req: NextRequest) {
       year:  subMonths(now, 6),
     }
 
-    const since = rangeStart[range] ?? rangeStart['month']
+    const since = rangeStart[range]
     const days  = range === 'week' ? 7 : range === 'month' ? 30 : 182
 
     const [aggregate, byTypeRows, chartRows] = await Promise.all([

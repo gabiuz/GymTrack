@@ -11,12 +11,15 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const range = searchParams.get('range') ?? 'today'
+    let range = searchParams.get('range') ?? 'today'
+    if (!['today', '3d', '7d', '30d'].includes(range)) {
+      range = 'today'
+    }
     const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10))
     const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '50', 10))
 
     const rangeDays: Record<string, number> = { today: 0, '3d': 3, '7d': 7, '30d': 30 }
-    const daysBack = rangeDays[range] ?? 0
+    const daysBack = rangeDays[range]
 
     const since = new Date()
     since.setDate(since.getDate() - daysBack)

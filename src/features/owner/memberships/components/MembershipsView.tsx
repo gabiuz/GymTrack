@@ -56,7 +56,7 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
   const [monthly, setMonthly]       = useState<MonthlyRow[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [manageOpen, setManageOpen] = useState(false);
-  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", memberDbId: 0, status: "active" as "active" | "expired" | "unassigned", annualEndDate: null as string | null, monthlyEndDate: null as string | null });
+  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", numericId: 0, status: "active" as "active" | "expired" | "unassigned", annualEndDate: null as string | null, monthlyEndDate: null as string | null });
   const [openingManageId, setOpeningManageId] = useState<number | null>(null);
 
   const openManageModal = async (memberDbId: number, memberName: string, memberId: string) => {
@@ -69,7 +69,7 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
       setManageCtx({
         name: memberName,
         id: memberId,
-        memberDbId,
+        numericId: memberDbId,
         status: detail.hasActiveMonthlyPlan || detail.hasActiveMembership ? "active" : detail.latestMembership ? "expired" : "unassigned",
         annualEndDate: detail.latestMembership?.endDate ?? null,
         monthlyEndDate: detail.latestMonthlyPlan?.endDate ?? null,
@@ -200,7 +200,7 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
         open={manageOpen}
         memberName={manageCtx.name}
         memberId={manageCtx.id}
-        memberDbId={manageCtx.memberDbId}
+        memberNumericId={manageCtx.numericId}
         memberStatus={manageCtx.status}
         annualEndDate={manageCtx.annualEndDate}
         monthlyEndDate={manageCtx.monthlyEndDate}

@@ -74,7 +74,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [outcome, setOutcome]   = useState<OutcomeData>({ kind: "ok", title: "", sub: "" });
   const [result, setResult]     = useState<CheckinResult | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
-  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", memberDbId: 0, status: "unassigned" as "active" | "expired" | "unassigned" });
+  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", numericId: 0, status: "unassigned" as "active" | "expired" | "unassigned" });
   const [idSuffix, setIdSuffix] = useState("");
   const [walkInName, setWalkInName] = useState("");
   const [guestName, setGuestName]   = useState("");
@@ -207,10 +207,10 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     go("outcome");
   }
 
-  function openManage(name: string, id: string, memberDbId: number, status: "active" | "expired" | "unassigned") {
-    setManageCtx({ name, id, memberDbId, status });
+  const openManage = (name: string, id: string, numericId: number, status: "active" | "expired" | "unassigned") => {
+    setManageCtx({ name, id, numericId, status });
     setManageOpen(true);
-  }
+  };
 
   const memberId = result?.member ? `MEM-${String(result.member.id).padStart(6, "0")}` : "";
 
@@ -611,7 +611,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         open={manageOpen}
         memberName={manageCtx.name}
         memberId={manageCtx.id}
-        memberDbId={manageCtx.memberDbId}
+        memberNumericId={manageCtx.numericId}
         memberStatus={manageCtx.status}
         monthlyEndDate={null}
         annualEndDate={null}

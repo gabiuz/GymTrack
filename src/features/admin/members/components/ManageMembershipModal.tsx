@@ -171,7 +171,15 @@ export function ManageMembershipModal({
             Annual membership
           </div>
           <div
-            onClick={() => !hasActiveAnnual && setMembership(!membership)}
+            onClick={() => {
+              if (!hasActiveAnnual) {
+                const nextMembership = !membership;
+                setMembership(nextMembership);
+                if (!nextMembership && plan !== 'none') {
+                  setPlan('none');
+                }
+              }
+            }}
             className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 transition-all duration-100 ${
               hasActiveAnnual
                 ? "border border-black/8 bg-gray-50 cursor-not-allowed opacity-60"
@@ -223,7 +231,12 @@ export function ManageMembershipModal({
                 {plans.map((p) => (
                   <div
                     key={p.key}
-                    onClick={() => setPlan(p.key)}
+                    onClick={() => {
+                      setPlan(p.key);
+                      if (p.key !== 'none' && !hasActiveAnnual) {
+                        setMembership(true);
+                      }
+                    }}
                     className={`border rounded-lg px-3.5 py-3 cursor-pointer text-center transition-all duration-100 ${
                       plan === p.key
                         ? "border-[2px] border-gym-lime bg-gym-lime/15"

@@ -8,7 +8,7 @@ interface ManageMembershipModalProps {
   open: boolean;
   memberName: string;
   memberId: string;
-  memberDbId: number;
+  memberNumericId: number | null;
   memberStatus: "active" | "expired" | "unassigned";
   monthlyEndDate: string | null;
   annualEndDate: string | null;
@@ -17,17 +17,17 @@ interface ManageMembershipModalProps {
 }
 
 const plans = [
-  { key: "none", label: "None",     sub: "daily rate", price: 0,    duration: 0 as 1 | 3 | 6 | 12 | 0 },
-  { key: "1m",   label: "1 month",  sub: "₱799",       price: 799,  duration: 1 as 1 | 3 | 6 | 12 | 0 },
-  { key: "3m",   label: "3 months", sub: "₱2,199",     price: 2199, duration: 3 as 1 | 3 | 6 | 12 | 0 },
-  { key: "6m",   label: "6 months", sub: "₱3,999",     price: 3999, duration: 6 as 1 | 3 | 6 | 12 | 0 },
+  { key: "none", label: "None",     sub: "daily rate", price: 0,    months: 0 },
+  { key: "1m",   label: "1 month",  sub: "₱799",       price: 799,  months: 1 },
+  { key: "3m",   label: "3 months", sub: "₱2,199",     price: 2199, months: 3 },
+  { key: "6m",   label: "6 months", sub: "₱3,999",     price: 3999, months: 6 },
 ];
 
 export function ManageMembershipModal({
   open,
   memberName,
   memberId,
-  memberDbId,
+  memberNumericId,
   memberStatus,
   monthlyEndDate,
   annualEndDate,
@@ -77,59 +77,58 @@ export function ManageMembershipModal({
 
   if (!open) return null;
 
+  const selectedPlan = plans.find((p) => p.key === plan)!;
   const membershipFee = membership ? 200 : 0;
-  const selectedPlan  = plans.find((p) => p.key === plan)!;
-  const planFee       = selectedPlan.price;
-  const total         = membershipFee + planFee;
+  const planFee = selectedPlan.price;
+  const total = membershipFee + planFee;
 
   const expiry = new Date();
   expiry.setFullYear(expiry.getFullYear() + 1);
-  const expiryStr = expiry.toLocaleDateString("en-PH", { day: "numeric", month: "short", year: "numeric" });
+  const expiryStr = expiry.toLocaleDateString("en-PH", {
+    day: "numeric", month: "short", year: "numeric",
+  });
 
-  const pillVariant = memberStatus === "active" ? "active" : memberStatus === "expired" ? "expired" : "unassigned";
+  const pillVariant =
+    memberStatus === "active" ? "active" : memberStatus === "expired" ? "expired" : "unassigned";
 
   async function handleConfirm() {
+    if (!memberNumericId) return;
     setError("");
     setLoading(true);
     try {
-      const requests: Promise<Response>[] = [];
+      const errors: string[] = [];
 
+      // Renew annual membership if selected
       if (membership) {
-        requests.push(
-          fetch("/api/owner/memberships/renew", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ memberId: memberDbId }),
-          })
-        );
+        const res = await fetch("/api/admin/memberships/renew", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId: memberNumericId }),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          errors.push(d.error ?? "Failed to renew membership");
+        }
       }
 
-      if (plan !== "none" && selectedPlan.duration > 0) {
-        requests.push(
-          fetch("/api/owner/monthly-plans", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ memberId: memberDbId, duration: selectedPlan.duration, amount: planFee }),
-          })
-        );
+      // Avail monthly plan if selected
+      if (selectedPlan.months > 0) {
+        const res = await fetch("/api/admin/monthly-plans", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberId: memberNumericId, duration: selectedPlan.months, amount: planFee }),
+        });
+        if (!res.ok) {
+          const d = await res.json();
+          errors.push(d.error ?? "Failed to avail monthly plan");
+        }
       }
 
-      if (requests.length === 0) {
-        setError("Please select at least one option.");
-        setLoading(false);
-        return;
+      if (errors.length > 0) {
+        setError(errors.join(" · "));
+      } else {
+        onConfirm("Membership activated", `${memberName} · ₱${total.toLocaleString()} recorded`);
       }
-
-      const results = await Promise.all(requests);
-      const failed = results.find((r) => !r.ok);
-      if (failed) {
-        const errData = await failed.json().catch(() => ({}));
-        setError((errData as { error?: string }).error ?? "Request failed");
-        setLoading(false);
-        return;
-      }
-
-      onConfirm("Membership activated", `${memberName} · ₱${total.toLocaleString()} recorded`);
     } catch {
       setError("Network error — please try again");
     } finally {
@@ -172,7 +171,15 @@ export function ManageMembershipModal({
             Annual membership
           </div>
           <div
-            onClick={() => !hasActiveAnnual && setMembership(!membership)}
+            onClick={() => {
+              if (!hasActiveAnnual) {
+                const nextMembership = !membership;
+                setMembership(nextMembership);
+                if (!nextMembership && plan !== 'none') {
+                  setPlan('none');
+                }
+              }
+            }}
             className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 transition-all duration-100 ${
               hasActiveAnnual
                 ? "border border-black/8 bg-gray-50 cursor-not-allowed opacity-60"
@@ -181,9 +188,11 @@ export function ManageMembershipModal({
                 : "border border-black/14 bg-gray-50 cursor-pointer"
             }`}
           >
-            <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all ${
-              membership ? "bg-gym-lime" : "bg-white border border-black/14"
-            }`}>
+            <div
+              className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all ${
+                membership ? "bg-gym-lime" : "bg-white border border-black/14"
+              }`}
+            >
               {membership && <Check size={13} color="#000" strokeWidth={3} />}
             </div>
             <div className="flex-1">
@@ -200,7 +209,7 @@ export function ManageMembershipModal({
             <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter">Monthly plan</span>
             {membership && !hasActivePlan && <span className="text-[11px] text-green-600 font-semibold font-inter">requires membership ✓</span>}
           </div>
-          
+
           {hasActivePlan && !canExtend ? (
             <div className="flex items-center gap-3 mb-2 border border-black/8 rounded-lg px-3.5 py-3 bg-gray-50 opacity-60 cursor-not-allowed">
               <div className="w-5 h-5 rounded-[5px] bg-white border border-black/14 flex items-center justify-center shrink-0">
@@ -222,9 +231,16 @@ export function ManageMembershipModal({
                 {plans.map((p) => (
                   <div
                     key={p.key}
-                    onClick={() => setPlan(p.key)}
+                    onClick={() => {
+                      setPlan(p.key);
+                      if (p.key !== 'none' && !hasActiveAnnual) {
+                        setMembership(true);
+                      }
+                    }}
                     className={`border rounded-lg px-3.5 py-3 cursor-pointer text-center transition-all duration-100 ${
-                      plan === p.key ? "border-[2px] border-gym-lime bg-gym-lime/15" : "border border-black/14 bg-white"
+                      plan === p.key
+                        ? "border-[2px] border-gym-lime bg-gym-lime/15"
+                        : "border border-black/14 bg-white"
                     }`}
                   >
                     <div className="text-sm font-bold text-gym-dark font-space">{p.label}</div>
@@ -233,6 +249,10 @@ export function ManageMembershipModal({
                 ))}
               </div>
             </>
+          )}
+
+          {error && (
+            <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
           )}
         </div>
 
@@ -257,10 +277,6 @@ export function ManageMembershipModal({
           </div>
         </div>
 
-        {error && (
-          <div className="px-5 py-2.5 bg-red-50 border-t border-red-200 text-sm text-red-600 font-inter">{error}</div>
-        )}
-
         <div className="flex justify-end gap-2 px-5 py-3.5 border-t border-black/8">
           <button
             onClick={onClose}
@@ -270,7 +286,7 @@ export function ManageMembershipModal({
           </button>
           <button
             onClick={handleConfirm}
-            disabled={loading || (!membership && selectedPlan.duration === 0)}
+            disabled={loading || (!membership && selectedPlan.months === 0)}
             className="flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none disabled:opacity-60"
           >
             <Banknote size={15} />

@@ -26,11 +26,20 @@ export async function POST(req: NextRequest) {
       select: {
         id: true,
         monthlyPlans: { orderBy: { endDate: 'desc' }, take: 1, select: { endDate: true } },
+        memberships: { orderBy: { endDate: 'desc' }, take: 1, select: { endDate: true } },
       },
     })
     if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
 
     const now = new Date()
+    const latestMembership = member.memberships[0]
+    if (!latestMembership || latestMembership.endDate < now) {
+      return NextResponse.json(
+        { error: 'Cannot avail monthly plan without an active annual membership' },
+        { status: 403 }
+      )
+    }
+
     const latestPlan = member.monthlyPlans[0]
     const startDate = latestPlan && latestPlan.endDate > now ? new Date(latestPlan.endDate) : new Date()
 

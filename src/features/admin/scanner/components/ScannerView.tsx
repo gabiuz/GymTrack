@@ -181,8 +181,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     go("outcome");
   };
 
-  const openManage = (name: string, id: string, numericId: number, status: "active" | "expired" | "unassigned") => {
-    setManageCtx({ name, id, numericId, status });
+  const openManage = () => {
     setManageOpen(true);
   };
 
@@ -435,7 +434,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <span className="text-[15px] text-[#3A5000] leading-relaxed">No membership or plan on file. Choose how to proceed.</span>
           </div>
           <button
-            onClick={() => openManage(checkinResult.member!.fullName, checkinResult.member!.memberId, checkinResult.member!.id, "unassigned")}
+            onClick={() => openManage()}
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5"
           >
             Register membership · ₱200/yr
@@ -585,7 +584,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             </span>
           </div>
           <button
-            onClick={() => openManage(checkinResult.member!.fullName, checkinResult.member!.memberId, checkinResult.member!.id, "expired")}
+            onClick={() => openManage()}
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5"
           >
             Renew monthly plan
