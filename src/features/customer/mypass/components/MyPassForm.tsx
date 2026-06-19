@@ -6,12 +6,12 @@ import Image from "next/image";
 
 export default function MyPassForm() {
 
-  const [fullName, setFullName]     = useState("");
-  const [memberId, setMemberId]     = useState("");
+  const [fullName, setFullName] = useState("");
+  const [memberId, setMemberId] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [qrCode, setQrCode]         = useState<string | null>(null);
-  const [isLoading, setIsLoading]   = useState(true);
-  const [showModal, setShowModal]   = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
 
   // Load member info — fetch from API (uses session cookie), fall back to sessionStorage cache
   useEffect(() => {
@@ -255,7 +255,7 @@ export default function MyPassForm() {
 
           {/* Available Plans button */}
           <Link
-            href="/#pricing"
+            href="/membership"
             className="bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-2.5 px-6 font-space font-bold text-xs text-gym-dark"
           >
             View available plans
