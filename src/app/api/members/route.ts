@@ -117,8 +117,8 @@ export async function GET(req: NextRequest) {
       const membershipStatus = hasActivePlan || hasActiveMembership
         ? 'active'
         : latestMembership || latestPlan
-        ? 'expired'
-        : 'unassigned'
+          ? 'expired'
+          : 'unassigned'
 
       return {
         id: m.id,
@@ -144,9 +144,6 @@ export async function GET(req: NextRequest) {
 // ─── POST /api/members  (public — customer self-registration)
 export async function POST(req: NextRequest) {
   try {
-    const postSession = await requireStaffOrOwner(req)
-    if (!postSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const body = await req.json()
 
     // ── Validate with Zod
