@@ -1,10 +1,6 @@
 "use client";
 
-<<<<<<< HEAD
-import { useState } from "react";
-=======
 import { useState, useEffect } from "react";
->>>>>>> origin/dev
 import { X, User, Check, Banknote } from "lucide-react";
 import { StatusPill } from "@/features/admin/_ui";
 
@@ -14,11 +10,8 @@ interface ManageMembershipModalProps {
   memberId: string;
   memberNumericId: number | null;
   memberStatus: "active" | "expired" | "unassigned";
-<<<<<<< HEAD
-=======
   monthlyEndDate: string | null;
   annualEndDate: string | null;
->>>>>>> origin/dev
   onClose: () => void;
   onConfirm: (title: string, sub: string) => void;
 }
@@ -36,15 +29,6 @@ export function ManageMembershipModal({
   memberId,
   memberNumericId,
   memberStatus,
-<<<<<<< HEAD
-  onClose,
-  onConfirm,
-}: ManageMembershipModalProps) {
-  const [membership, setMembership] = useState(memberStatus !== "active");
-  const [plan, setPlan] = useState("1m");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-=======
   monthlyEndDate,
   annualEndDate,
   onClose,
@@ -90,7 +74,6 @@ export function ManageMembershipModal({
       setLoading(false);
     }
   }, [open, hasActiveAnnual, hasActivePlan, canExtend]);
->>>>>>> origin/dev
 
   if (!open) return null;
 
@@ -184,15 +167,10 @@ export function ManageMembershipModal({
           </div>
 
           {/* Annual membership */}
-          <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2 font-inter">
+          <div className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase mb-2 font-inter">
             Annual membership
           </div>
           <div
-<<<<<<< HEAD
-            onClick={() => memberStatus !== "active" && setMembership(!membership)}
-            className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 transition-all duration-100 ${
-              memberStatus === "active"
-=======
             onClick={() => {
               if (!hasActiveAnnual) {
                 const nextMembership = !membership;
@@ -204,33 +182,22 @@ export function ManageMembershipModal({
             }}
             className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 transition-all duration-100 ${
               hasActiveAnnual
->>>>>>> origin/dev
                 ? "border border-black/8 bg-gray-50 cursor-not-allowed opacity-60"
                 : membership
                 ? "border-[2px] border-gym-lime bg-gym-lime/15 cursor-pointer"
                 : "border border-black/14 bg-gray-50 cursor-pointer"
             }`}
           >
-<<<<<<< HEAD
-            <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all ${
-              membership ? "bg-gym-lime" : "bg-white border border-black/14"
-            }`}>
-=======
             <div
               className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all ${
                 membership ? "bg-gym-lime" : "bg-white border border-black/14"
               }`}
             >
->>>>>>> origin/dev
               {membership && <Check size={13} color="#000" strokeWidth={3} />}
             </div>
             <div className="flex-1">
               <div className="text-sm font-semibold text-gym-dark font-inter">
-<<<<<<< HEAD
-                {memberStatus === "active" ? "Already active" : "Activate membership"}
-=======
                 {hasActiveAnnual ? "Already active" : "Activate membership"}
->>>>>>> origin/dev
               </div>
               <div className="text-xs text-gray-400 font-inter">Today → {expiryStr} · 1 year</div>
             </div>
@@ -238,29 +205,8 @@ export function ManageMembershipModal({
           </div>
 
           {/* Monthly plan */}
-<<<<<<< HEAD
-          <div className="flex items-center justify-between mb-2.5">
-            <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter">Monthly plan</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {plans.map((p) => (
-              <div
-                key={p.key}
-                onClick={() => setPlan(p.key)}
-                className={`border rounded-lg px-3.5 py-3 cursor-pointer text-center transition-all duration-100 ${
-                  plan === p.key
-                    ? "border-[2px] border-gym-lime bg-gym-lime/15"
-                    : "border border-black/14 bg-white"
-                }`}
-              >
-                <div className="text-sm font-bold text-gym-dark font-space">{p.label}</div>
-                <div className="text-xs text-gray-400 font-inter">{p.sub}</div>
-              </div>
-            ))}
-          </div>
-=======
           <div className="flex items-center justify-between mb-2.5 mt-2">
-            <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter">Monthly plan</span>
+            <span className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase font-inter">Monthly plan</span>
             {membership && !hasActivePlan && <span className="text-[11px] text-green-600 font-semibold font-inter">requires membership ✓</span>}
           </div>
 
@@ -304,7 +250,6 @@ export function ManageMembershipModal({
               </div>
             </>
           )}
->>>>>>> origin/dev
 
           {error && (
             <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
@@ -313,7 +258,7 @@ export function ManageMembershipModal({
 
         {/* Summary */}
         <div className="px-5 py-4 bg-gray-50 border-t border-black/8">
-          <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Payment due now</div>
+          <div className="text-[11px] font-semibold text-gray-400 tracking-widests uppercase mb-2.5 font-inter">Payment due now</div>
           {membership && (
             <div className="flex justify-between text-[13px] mb-1 font-inter">
               <span className="text-gray-400">Membership fee</span>
