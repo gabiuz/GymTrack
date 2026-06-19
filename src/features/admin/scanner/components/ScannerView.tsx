@@ -181,6 +181,11 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     go("outcome");
   };
 
+  const openManage = (name: string, id: string, numericId: number, status: "active" | "expired" | "unassigned") => {
+    setManageCtx({ name, id, numericId, status });
+    setManageOpen(true);
+  };
+
   // ── Camera / QR scanner setup ───────────────────────────────────────────
   const stopScanner = useCallback(async () => {
     if (html5QrRef.current) {
@@ -430,7 +435,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <span className="text-[15px] text-[#3A5000] leading-relaxed">No membership or plan on file. Choose how to proceed.</span>
           </div>
           <button
-            onClick={() => setManageOpen(true)}
+            onClick={() => openManage(checkinResult.member!.fullName, checkinResult.member!.memberId, checkinResult.member!.id, "unassigned")}
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5"
           >
             Register membership · ₱200/yr
@@ -580,7 +585,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             </span>
           </div>
           <button
-            onClick={() => setManageOpen(true)}
+            onClick={() => openManage(checkinResult.member!.fullName, checkinResult.member!.memberId, checkinResult.member!.id, "expired")}
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5"
           >
             Renew monthly plan
@@ -711,6 +716,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         memberId={manageCtx.id}
         memberNumericId={manageCtx.numericId}
         memberStatus={manageCtx.status}
+        monthlyEndDate={null}
+        annualEndDate={null}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); go("ready"); }}
       />

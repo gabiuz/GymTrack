@@ -78,6 +78,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
   const [idSuffix, setIdSuffix] = useState("");
   const [walkInName, setWalkInName] = useState("");
   const [guestName, setGuestName]   = useState("");
+  const [memberDailyRate, setMemberDailyRate] = useState<number | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameras, setCameras]         = useState<MediaDeviceInfo[]>([]);
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
@@ -381,7 +382,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5">
             Register membership · ₱200/yr
           </button>
-          <button onClick={() => void confirmPayment("daily", 75)}
+          <button onClick={() => { setMemberDailyRate(75); go("res-b"); }}
             className="w-full py-4 text-[15px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
             Daily visit · ₱75
           </button>
@@ -389,27 +390,40 @@ export function ScannerView({ onToast }: ScannerViewProps) {
       )}
 
       {/* ── RES B — Daily visit (member) ── */}
-      {state === "res-b" && result?.member && (
-        <ScanCard>
-          <MemberHeader name={result.member.fullName} id={result.member.memberId} pill={<StatusPill variant="active" size="md">Active member</StatusPill>} />
-          <div className="text-center px-4 py-5 bg-gray-50 rounded-xl mb-3.5">
-            <div className="text-[11px] font-semibold text-gray-400 tracking-[0.08em] uppercase font-inter mb-1.5">Daily visit · amount due</div>
-            <div className="font-space text-[52px] font-bold text-gym-dark tracking-tight leading-none">₱{result.rate ?? 70}</div>
-            <div className="text-[13px] text-gray-400 font-inter mt-1.5">member rate · non-member is ₱75</div>
-          </div>
-          <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">Paid records attendance + payment. Unpaid denies access.</div>
-          <div className="flex flex-col lg:flex-row gap-2.5">
-            <button onClick={() => void confirmPayment("daily", result.rate ?? 70)}
-              className="flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
-              <Check size={16} strokeWidth={2.5} /> Mark paid
-            </button>
-            <button onClick={() => recordOutcome("deny", "Access denied", "Visit not paid — no attendance recorded")}
-              className="flex items-center justify-center gap-2 px-5 py-4 text-[15px] font-bold font-space border border-black/14 rounded-full bg-white text-red-600 cursor-pointer hover:bg-red-50 transition-colors whitespace-nowrap">
-              <XIcon size={16} strokeWidth={2.5} /> Unpaid
-            </button>
-          </div>
-        </ScanCard>
-      )}
+      {state === "res-b" && result?.member && (() => {
+        const rate = memberDailyRate ?? result.rate ?? 70;
+        let pillVariant: "active" | "unassigned" | "expired" = "active";
+        let pillLabel = "Active member";
+        if (result.status === "unassigned") { pillVariant = "unassigned"; pillLabel = "Unassigned"; }
+        else if (result.status === "expired") { pillVariant = "expired"; pillLabel = "Plan expired"; }
+
+        return (
+          <ScanCard>
+            <MemberHeader name={result.member.fullName} id={result.member.memberId} pill={<StatusPill variant={pillVariant} size="md">{pillLabel}</StatusPill>} />
+            <div className="text-center px-4 py-5 bg-gray-50 rounded-xl mb-3.5">
+              <div className="text-[11px] font-semibold text-gray-400 tracking-[0.08em] uppercase font-inter mb-1.5">Daily visit · amount due</div>
+              <div className="font-space text-[52px] font-bold text-gym-dark tracking-tight leading-none">₱{rate}</div>
+              <div className="text-[13px] text-gray-400 font-inter mt-1.5">
+                {result.status === "unassigned" ? "no membership · members with plan pay ₱70" : "member rate · non-member is ₱75"}
+              </div>
+            </div>
+            <div className="text-[13px] text-gray-400 text-center mb-4.5 font-inter">Paid records attendance + payment. Unpaid denies access.</div>
+            <div className="flex flex-col lg:flex-row gap-2.5">
+              <button onClick={async () => {
+                  await confirmPayment("daily", rate);
+                  setMemberDailyRate(null);
+                }}
+                className="flex-1 flex items-center justify-center gap-2 py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+                <Check size={16} strokeWidth={2.5} /> Mark paid
+              </button>
+              <button onClick={() => { setMemberDailyRate(null); recordOutcome("deny", "Access denied", "Visit not paid — no attendance recorded"); }}
+                className="flex items-center justify-center gap-2 px-5 py-4 text-[15px] font-bold font-space border border-black/14 rounded-full bg-white text-red-600 cursor-pointer hover:bg-red-50 transition-colors whitespace-nowrap">
+                <XIcon size={16} strokeWidth={2.5} /> Unpaid
+              </button>
+            </div>
+          </ScanCard>
+        );
+      })()}
 
       {/* ── RES GUEST — Daily visit (guest / walk-in) ── */}
       {state === "res-guest" && (
@@ -500,7 +514,7 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5">
             Renew membership
           </button>
-          <button onClick={() => void confirmPayment("daily", result.rate ?? 70)}
+          <button onClick={() => { setMemberDailyRate(result.rate ?? 70); go("res-b"); }}
             className="w-full py-4 text-[15px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
             Switch to daily visit · ₱{result.rate ?? 70}
           </button>
@@ -599,6 +613,8 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         memberId={manageCtx.id}
         memberDbId={manageCtx.memberDbId}
         memberStatus={manageCtx.status}
+        monthlyEndDate={null}
+        annualEndDate={null}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); go("ready"); }}
       />

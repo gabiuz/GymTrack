@@ -56,7 +56,31 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
   const [monthly, setMonthly]       = useState<MonthlyRow[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
   const [manageOpen, setManageOpen] = useState(false);
-  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", memberDbId: 0, status: "active" as "active" | "expired" | "unassigned" });
+  const [manageCtx, setManageCtx]   = useState({ name: "", id: "", memberDbId: 0, status: "active" as "active" | "expired" | "unassigned", annualEndDate: null as string | null, monthlyEndDate: null as string | null });
+  const [openingManageId, setOpeningManageId] = useState<number | null>(null);
+
+  const openManageModal = async (memberDbId: number, memberName: string, memberId: string) => {
+    setOpeningManageId(memberDbId);
+    try {
+      const res = await fetch(`/api/members/${memberDbId}`);
+      if (!res.ok) return;
+      const { data: detail } = await res.json();
+      
+      setManageCtx({
+        name: memberName,
+        id: memberId,
+        memberDbId,
+        status: detail.hasActiveMonthlyPlan || detail.hasActiveMembership ? "active" : detail.latestMembership ? "expired" : "unassigned",
+        annualEndDate: detail.latestMembership?.endDate ?? null,
+        monthlyEndDate: detail.latestMonthlyPlan?.endDate ?? null,
+      });
+      setManageOpen(true);
+    } catch {
+      onToast("Error", "Could not load member details");
+    } finally {
+      setOpeningManageId(null);
+    }
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -153,14 +177,16 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
                   <span className="w-20 text-right">
                     {!m.isActive ? (
                       <button
-                        onClick={() => { setManageCtx({ name: m.memberName, id: m.memberId, memberDbId: m.memberDbId, status: "expired" }); setManageOpen(true); }}
-                        className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90"
-                      >Renew</button>
+                        onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
+                        disabled={openingManageId === m.memberDbId}
+                        className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 disabled:opacity-60"
+                      >{openingManageId === m.memberDbId ? "…" : "Renew"}</button>
                     ) : (
                       <button
-                        onClick={() => { setManageCtx({ name: m.memberName, id: m.memberId, memberDbId: m.memberDbId, status: "active" }); setManageOpen(true); }}
-                        className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors"
-                      >Manage</button>
+                        onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
+                        disabled={openingManageId === m.memberDbId}
+                        className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-60"
+                      >{openingManageId === m.memberDbId ? "…" : "Manage"}</button>
                     )}
                   </span>
                 </div>
@@ -176,6 +202,8 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
         memberId={manageCtx.id}
         memberDbId={manageCtx.memberDbId}
         memberStatus={manageCtx.status}
+        annualEndDate={manageCtx.annualEndDate}
+        monthlyEndDate={manageCtx.monthlyEndDate}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); reload(); }}
       />

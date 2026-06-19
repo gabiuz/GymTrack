@@ -271,6 +271,8 @@ export function MembersView({ onToast }: MembersViewProps) {
         memberId={member?.memberId ?? ""}
         memberDbId={member?.id ?? 0}
         memberStatus={member?.membershipStatus ?? "unassigned"}
+        monthlyEndDate={member?.monthlyEndDate ?? null}
+        annualEndDate={member?.annualEndDate ?? null}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); loadMembers(search); }}
       />

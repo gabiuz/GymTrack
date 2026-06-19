@@ -30,13 +30,19 @@ export async function POST(req: NextRequest) {
 
     const member = await prisma.member.findUnique({
       where: { id: memberId },
-      select: { id: true },
+      select: {
+        id: true,
+        monthlyPlans: { orderBy: { endDate: 'desc' }, take: 1, select: { endDate: true } },
+      },
     })
     if (!member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
-    const startDate = new Date()
+    const now = new Date()
+    const latestPlan = member.monthlyPlans[0]
+    const startDate = latestPlan && latestPlan.endDate > now ? new Date(latestPlan.endDate) : new Date()
+
     const endDate = new Date(startDate)
     endDate.setMonth(endDate.getMonth() + duration)
 
