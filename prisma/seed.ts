@@ -234,7 +234,7 @@ async function main() {
   console.log(`✅  Payments: ${paymentRows.length} created`)
 
   // ── 7. Attendance ──────────────────────────────────────────────────────────
-  const attendanceRows: Parameters<typeof prisma.attendance.createMany>[0]['data'] = []
+  const attendanceRows: NonNullable<Parameters<typeof prisma.attendance.createMany>[0]>['data'] = []
 
   // TODAY — all 30 members check in today
   for (const member of members) {
