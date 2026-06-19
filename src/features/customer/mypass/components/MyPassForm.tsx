@@ -6,21 +6,13 @@ import Image from "next/image";
 
 export default function MyPassForm() {
 
-<<<<<<< HEAD
-  const [fullName, setFullName]     = useState("");
-  const [memberId, setMemberId]     = useState("");
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [qrCode, setQrCode]         = useState<string | null>(null);
-  const [isLoading, setIsLoading]   = useState(true);
-  const [showModal, setShowModal]   = useState(false);
-=======
   const [fullName, setFullName] = useState("");
   const [memberId, setMemberId] = useState("");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
->>>>>>> origin/dev
+  const [memberState, setMemberState] = useState<"unassigned" | "guest" | "assigned">("unassigned");
 
   // Load member info — fetch from API (uses session cookie), fall back to sessionStorage cache
   useEffect(() => {
@@ -36,6 +28,9 @@ export default function MyPassForm() {
           if (m.memberId) setMemberId(m.memberId);
           if (m.photoUrl) setPhotoPreview(m.photoUrl);
           if (m.qrCode) setQrCode(m.qrCode);
+          if (m.membershipStatus === "active" || m.membershipStatus === "expired") {
+            setMemberState("assigned");
+          }
           // Refresh sessionStorage cache
           sessionStorage.setItem("member_id", m.memberId);
           sessionStorage.setItem("qr_code", m.qrCode ?? "");
@@ -127,12 +122,20 @@ export default function MyPassForm() {
               </p>
             </div>
 
-            {/* Unassigned Status Badge */}
-            <div className="bg-white/10 border border-white/20 rounded-full px-2.5 py-1 flex items-center justify-center shrink-0">
-              <span className="font-inter font-semibold text-xs leading-none text-white/50 tracking-wide">
-                Unassigned
-              </span>
-            </div>
+            {/* Status Badge */}
+            {memberState === "assigned" ? (
+              <div className="bg-green-600/20 border border-green-600/40 rounded-full px-2.5 py-1 flex items-center justify-center shrink-0">
+                <span className="font-inter font-semibold text-xs leading-none text-green-400 tracking-wide">
+                  Active
+                </span>
+              </div>
+            ) : (
+              <div className="bg-white/10 border border-white/20 rounded-full px-2.5 py-1 flex items-center justify-center shrink-0">
+                <span className="font-inter font-semibold text-xs leading-none text-white/50 tracking-wide">
+                  Unassigned
+                </span>
+              </div>
+            )}
           </div>
 
           {/* QR Code Body Section */}
@@ -231,49 +234,47 @@ export default function MyPassForm() {
         </div>
 
         {/* Unassigned Warning Hint Card */}
-        <div className="bg-white border border-gray-200 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center">
-          {/* Dashboard Loading Alert Icon */}
-          <div className="pb-3">
-            <div className="bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center shrink-0">
-              <svg
-                className="animate-spin text-gym-lime"
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" strokeDasharray="6 6" />
-              </svg>
+        {memberState === "unassigned" && (
+          <div className="bg-white border border-gray-200 border-dashed rounded-2xl p-5 flex flex-col items-center justify-center text-center">
+            {/* Dashboard Loading Alert Icon */}
+            <div className="pb-3">
+              <div className="bg-gray-100 rounded-full w-10 h-10 flex items-center justify-center shrink-0">
+                <svg
+                  className="animate-spin text-gym-lime"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" strokeDasharray="6 6" />
+                </svg>
+              </div>
             </div>
+
+            {/* Heading */}
+            <h2 className="font-space font-medium text-sm leading-5 text-gym-dark">
+              No plan assigned yet
+            </h2>
+
+            {/* Subtitle description */}
+            <p className="font-inter font-normal text-xs leading-5 text-gym-gray pt-1.5 pb-4 max-w-78">
+              Bring your QR to the counter. Staff will scan and assign your membership or daily visit.
+            </p>
+
+            {/* Available Plans button */}
+            <Link
+              href="/membership"
+              className="bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-2.5 px-6 font-space font-bold text-xs text-gym-dark"
+            >
+              View available plans
+            </Link>
           </div>
-
-          {/* Heading */}
-          <h2 className="font-space font-medium text-sm leading-5 text-gym-dark">
-            No plan assigned yet
-          </h2>
-
-          {/* Subtitle description */}
-          <p className="font-inter font-normal text-xs leading-5 text-gym-gray pt-1.5 pb-4 max-w-78">
-            Bring your QR to the counter. Staff will scan and assign your membership or daily visit.
-          </p>
-
-          {/* Available Plans button */}
-          <Link
-<<<<<<< HEAD
-            href="/#pricing"
-=======
-            href="/membership"
->>>>>>> origin/dev
-            className="bg-gym-lime hover:opacity-90 active:scale-[0.99] transition-all rounded-full py-2.5 px-6 font-space font-bold text-xs text-gym-dark"
-          >
-            View available plans
-          </Link>
-        </div>
+        )}
 
         {/* Privacy Note Info Box */}
         <div className="bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-3 flex gap-2.5 items-start">

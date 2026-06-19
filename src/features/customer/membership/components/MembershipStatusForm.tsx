@@ -10,6 +10,10 @@ export default function MembershipStatusForm() {
   const [memberId, setMemberId] = useState("");
   const [memberState, setMemberState] = useState<MemberState>("unassigned");
 
+  const [annualStartDate, setAnnualStartDate] = useState<string | null>(null);
+  const [annualEndDate, setAnnualEndDate] = useState<string | null>(null);
+  const [monthlyEndDate, setMonthlyEndDate] = useState<string | null>(null);
+
   // Load member info — fetch from API (uses session cookie), fall back to sessionStorage cache
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -21,6 +25,12 @@ export default function MembershipStatusForm() {
           const m = json.data;
           if (m.fullName) setFullName(m.fullName);
           if (m.memberId) setMemberId(m.memberId);
+          if (m.membershipStatus === "active" || m.membershipStatus === "expired") {
+            setMemberState("assigned");
+          }
+          if (m.annualStartDate) setAnnualStartDate(m.annualStartDate);
+          if (m.annualEndDate) setAnnualEndDate(m.annualEndDate);
+          if (m.monthlyEndDate) setMonthlyEndDate(m.monthlyEndDate);
         }
       })
       .catch(() => {
@@ -38,13 +48,35 @@ export default function MembershipStatusForm() {
   }, []);
 
   // Format today's date dynamically (e.g. 12 Jun 2026)
-  const getFormattedDate = () => {
-    const today = new Date();
-    const day = today.getDate();
-    const month = today.toLocaleString("en-US", { month: "short" });
-    const year = today.getFullYear();
+  const getFormattedDate = (dateStr?: string | null) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    const month = d.toLocaleString("en-US", { month: "short" });
+    const year = d.getFullYear();
     return `${day} ${month} ${year}`;
   };
+
+  const getDaysRemaining = (endDateStr: string | null) => {
+    if (!endDateStr) return 0;
+    const end = new Date(endDateStr).getTime();
+    const now = new Date().getTime();
+    const diff = end - now;
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+
+  const getProgressPercentage = (startStr: string | null, endStr: string | null) => {
+    if (!startStr || !endStr) return 0;
+    const start = new Date(startStr).getTime();
+    const end = new Date(endStr).getTime();
+    const now = new Date().getTime();
+    const total = end - start;
+    const passed = now - start;
+    if (total <= 0) return 100;
+    const pct = (passed / total) * 100;
+    return Math.max(0, Math.min(100, pct));
+  };
+
 
   return (
     <div className="w-full bg-gym-gray-bg px-5 py-8 grow flex flex-col justify-start">
@@ -486,7 +518,7 @@ export default function MembershipStatusForm() {
                     Member since
                   </span>
                   <span className="font-inter font-semibold text-xs text-white mt-0.5">
-                    12 Jan 2026
+                    {getFormattedDate(annualStartDate)}
                   </span>
                 </div>
 
@@ -497,7 +529,7 @@ export default function MembershipStatusForm() {
                     Annual expires
                   </span>
                   <span className="font-inter font-semibold text-xs text-white mt-0.5">
-                    12 Jan 2027
+                    {getFormattedDate(annualEndDate)}
                   </span>
                 </div>
               </div>
@@ -543,7 +575,7 @@ export default function MembershipStatusForm() {
                   Started
                 </span>
                 <span className="font-inter font-medium text-xs text-gym-dark">
-                  12 Jan 2026
+                  {getFormattedDate(annualStartDate)}
                 </span>
               </div>
 
@@ -553,17 +585,17 @@ export default function MembershipStatusForm() {
                   Expires
                 </span>
                 <span className="font-inter font-medium text-xs text-gym-dark">
-                  12 Jan 2027
+                  {getFormattedDate(annualEndDate)}
                 </span>
               </div>
 
               {/* Progress Bar */}
               <div className="border-t border-gray-200 pt-3 flex flex-col gap-1.5">
                 <div className="bg-gym-gray-bg h-1.5 rounded-full w-full overflow-hidden">
-                  <div className="bg-gym-lime h-full rounded-full w-[41%]" />
+                  <div className="bg-gym-lime h-full rounded-full" style={{ width: `${getProgressPercentage(annualStartDate, annualEndDate)}%` }} />
                 </div>
                 <span className="font-inter font-normal text-xs text-gym-gray/60">
-                  217 days remaining &middot; ₱200 / year
+                  {getDaysRemaining(annualEndDate)} days remaining &middot; ₱200 / year
                 </span>
               </div>
             </div>
@@ -595,11 +627,23 @@ export default function MembershipStatusForm() {
                   </span>
                 </div>
 
-                <div className="bg-amber-50 rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0">
-                  <span className="font-inter font-semibold text-xs leading-[16.5px] text-amber-600 tracking-wide">
-                    Expiring soon
-                  </span>
-                </div>
+                {monthlyEndDate && (
+                  <div className={`rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0 ${
+                    getDaysRemaining(monthlyEndDate) === 0 ? "bg-red-50" :
+                    getDaysRemaining(monthlyEndDate) <= 7 ? "bg-amber-50" :
+                    "bg-green-50"
+                  }`}>
+                    <span className={`font-inter font-semibold text-xs leading-[16.5px] tracking-wide ${
+                      getDaysRemaining(monthlyEndDate) === 0 ? "text-red-600" :
+                      getDaysRemaining(monthlyEndDate) <= 7 ? "text-amber-600" :
+                      "text-green-600"
+                    }`}>
+                      {getDaysRemaining(monthlyEndDate) === 0 ? "Expired" :
+                       getDaysRemaining(monthlyEndDate) <= 7 ? "Expiring soon" :
+                       "Active"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Plan Row */}
@@ -612,38 +656,44 @@ export default function MembershipStatusForm() {
                 </span>
               </div>
 
-              {/* Expires Row */}
-              <div className="border-t border-gray-200 py-2.5 flex items-center justify-between">
-                <span className="font-inter font-normal text-xs text-gym-gray">
-                  Expires
-                </span>
-                <span className="font-inter font-semibold text-xs text-amber-600">
-                  9 Jul 2026
-                </span>
-              </div>
+              {monthlyEndDate && (
+                <>
+                  {/* Expires Row */}
+                  <div className="border-t border-gray-200 py-2.5 flex items-center justify-between">
+                    <span className="font-inter font-normal text-xs text-gym-gray">
+                      Expires
+                    </span>
+                    <span className={`font-inter font-semibold text-xs ${getDaysRemaining(monthlyEndDate) <= 7 ? 'text-amber-600' : 'text-gym-dark'}`}>
+                      {getFormattedDate(monthlyEndDate)}
+                    </span>
+                  </div>
 
-              {/* Alert Warning Row */}
-              <div className="border-t border-gray-200 pt-3 flex items-center gap-1.5 text-amber-600">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="shrink-0"
-                >
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span className="font-inter font-normal text-xs leading-tight">
-                  5 days left &mdash; renew at the counter
-                </span>
-              </div>
+                  {/* Alert Warning Row */}
+                  {getDaysRemaining(monthlyEndDate) <= 7 && (
+                    <div className="border-t border-gray-200 pt-3 flex items-center gap-1.5 text-amber-600">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="shrink-0"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span className="font-inter font-normal text-xs leading-tight">
+                        {getDaysRemaining(monthlyEndDate) === 0 ? "Plan expired — renew at the counter" : `${getDaysRemaining(monthlyEndDate)} days left — renew at the counter`}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Daily Visit Rate Benefit White Card */}
