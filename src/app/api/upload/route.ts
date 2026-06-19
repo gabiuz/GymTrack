@@ -33,6 +33,8 @@ const validator = new ImageValidator(
   10 * 1024 * 1024 // 10 MB limit
 )
 
+<<<<<<< HEAD
+=======
 // ─── IP Rate Limiter (In-Memory) ─────────────────────────────────────────────
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000 // 15 minutes
@@ -55,17 +57,21 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
+>>>>>>> origin/dev
 // ─── POST /api/upload ────────────────────────────────────────────────────────
 // Accepts multipart/form-data with a "file" field,
 // uploads to Cloudinary, returns { url }
 export async function POST(req: NextRequest) {
   try {
+<<<<<<< HEAD
+=======
     // 1. IP Rate Limiting
     const ip = req.headers.get('x-forwarded-for') || 'unknown'
     if (!checkRateLimit(ip)) {
       return NextResponse.json({ error: 'Too many requests, please try again later.' }, { status: 429 })
     }
 
+>>>>>>> origin/dev
     const formData = await req.formData()
     const file = formData.get('file') as File | null
 

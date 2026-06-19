@@ -13,6 +13,17 @@ interface MemberRow {
   memberId: string;
   fullName: string;
   contactNumber: string;
+<<<<<<< HEAD
+  address: string;
+  gender: string;
+  dateOfBirth: string | null;
+  emergencyContact: string | null;
+  photoUrl: string | null;
+  createdAt: string;
+  membershipStatus: "active" | "expired" | "unassigned";
+  annualEndDate: string | null;
+  monthlyEndDate: string | null;
+=======
   gender: string;
   photoUrl: string | null;
   createdAt: string;
@@ -28,10 +39,34 @@ interface MemberDetail extends MemberRow {
   hasActiveMonthlyPlan: boolean;
   latestMembership: { endDate: string } | null;
   latestMonthlyPlan: { endDate: string } | null;
+>>>>>>> origin/dev
 }
 
 interface MembersViewProps { onToast: (title: string, sub: string) => void; }
 
+<<<<<<< HEAD
+function Skeleton({ className }: { className: string }) {
+  return <div className={`bg-gray-100 rounded animate-pulse ${className}`} />;
+}
+
+const KV = ({ label, value, last = false }: { label: string; value: string; last?: boolean }) => (
+  <div className={`flex justify-between items-start text-[13px] py-2 font-inter ${last ? "" : "border-b border-black/8"}`}>
+    <span className="text-gray-400">{label}</span>
+    <span className="text-gym-dark text-right max-w-[170px] font-medium">{value}</span>
+  </div>
+);
+
+function fmtDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-PH", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+export function MembersView({ onToast }: MembersViewProps) {
+  const [search, setSearch] = useState("");
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+=======
 export function MembersView({ onToast }: MembersViewProps) {
   const [search, setSearch] = useState("");
   const [members, setMembers] = useState<MemberRow[]>([]);
@@ -39,6 +74,7 @@ export function MembersView({ onToast }: MembersViewProps) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<MemberDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+>>>>>>> origin/dev
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
@@ -101,6 +137,31 @@ export function MembersView({ onToast }: MembersViewProps) {
     };
   }, [isDragging]);
 
+<<<<<<< HEAD
+  const loadMembers = useCallback((q = "") => {
+    setIsLoading(true);
+    fetch(`/api/members?search=${encodeURIComponent(q)}&limit=50`)
+      .then((r) => r.json())
+      .then((d) => {
+        const rows: MemberRow[] = d.data ?? [];
+        setMembers(rows);
+        if (!selectedId && rows.length > 0) setSelectedId(rows[0].memberId);
+      })
+      .finally(() => setIsLoading(false));
+  }, [selectedId]);
+
+  useEffect(() => { loadMembers(); }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => loadMembers(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const member = members.find((m) => m.memberId === selectedId) ?? members[0] ?? null;
+
+  const pillVariant = member?.membershipStatus === "active" ? "active" : member?.membershipStatus === "expired" ? "expired" : "unassigned";
+  const pillLabel = member?.membershipStatus === "active" ? "Active" : member?.membershipStatus === "expired" ? "Expired" : "Unassigned";
+=======
   const fetchMembers = useCallback(() => {
     setLoading(true);
     fetch(`/api/members?search=${encodeURIComponent(search)}&limit=50`)
@@ -148,6 +209,7 @@ export function MembersView({ onToast }: MembersViewProps) {
       <span className="text-gym-dark text-right max-w-[170px] font-medium">{value}</span>
     </div>
   );
+>>>>>>> origin/dev
 
   return (
     <>
@@ -176,6 +238,24 @@ export function MembersView({ onToast }: MembersViewProps) {
             />
           </div>
           <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[240px] lg:max-h-[380px]">
+<<<<<<< HEAD
+            {isLoading ? Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-[46px] rounded-lg" />
+            )) : members.length === 0 ? (
+              <div className="text-[12px] text-gray-400 font-inter px-2 py-4 text-center">No members found.</div>
+            ) : members.map((m) => {
+              const active = selectedId === m.memberId;
+              const variant = m.membershipStatus === "active" ? "active" : m.membershipStatus === "expired" ? "expired" : "unassigned";
+              const label = m.membershipStatus === "active" ? "Active" : m.membershipStatus === "expired" ? "Expired" : "Unassigned";
+              return (
+                <div
+                  key={m.memberId}
+                  onClick={() => setSelectedId(m.memberId)}
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${active ? "bg-gym-lime/20" : "hover:bg-gray-50"}`}
+                >
+                  <div className={`w-7.5 h-7.5 rounded-full flex items-center justify-center text-gray-400 shrink-0 ${active ? "bg-gym-lime/40" : "bg-gray-100"}`}>
+                    <User size={14} />
+=======
             {loading ? (
               <div className="text-[13px] text-gray-300 font-inter px-2 py-4 text-center">Loading…</div>
             ) : members.length === 0 ? (
@@ -192,12 +272,17 @@ export function MembersView({ onToast }: MembersViewProps) {
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-gray-400 shrink-0 ${active ? "bg-gym-lime/40" : "bg-gray-100"}`}>
                     <User size={13} />
+>>>>>>> origin/dev
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-gym-dark whitespace-nowrap overflow-hidden text-ellipsis font-inter">{m.fullName}</div>
                     <div className="text-[10px] text-gray-300 font-mono">{m.memberId}</div>
                   </div>
+<<<<<<< HEAD
+                  <StatusPill variant={variant}>{label}</StatusPill>
+=======
                   <StatusPill variant={statusVariant}>{statusLabel}</StatusPill>
+>>>>>>> origin/dev
                 </div>
               );
             })}
@@ -213,6 +298,56 @@ export function MembersView({ onToast }: MembersViewProps) {
         </div>
 
         {/* Detail panel */}
+<<<<<<< HEAD
+        {member ? (
+          <div className="flex-1 p-4 lg:p-5.5 min-w-0">
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="w-[54px] h-[54px] rounded-full bg-gray-100 flex items-center justify-center text-gray-300">
+                <User size={24} />
+              </div>
+              <div className="flex-1">
+                <div className="font-space font-bold text-xl tracking-tight text-gym-dark">{member.fullName}</div>
+                <div className="text-xs text-gray-400 font-mono">{member.memberId} · joined {fmtDate(member.createdAt)}</div>
+              </div>
+              <StatusPill variant={pillVariant} size="md">{pillLabel}</StatusPill>
+            </div>
+
+            <div className="flex gap-2 mb-6 flex-wrap">
+              <button onClick={() => setManageOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90">
+                <BadgeCheck size={14} /> Manage membership
+              </button>
+              <button onClick={() => setQrOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
+                <QrCode size={14} /> View QR
+              </button>
+              <button onClick={() => setEditOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors">
+                <Pencil size={14} /> Edit
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Contact</div>
+                <KV label="Phone" value={member.contactNumber} />
+                <KV label="Address" value={member.address} />
+                <KV label="Emergency" value={member.emergencyContact ?? "—"} last />
+              </div>
+              <div className="mt-4 lg:mt-0">
+                <div className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase mb-2.5 font-inter">Membership</div>
+                <KV label="Annual" value={fmtDate(member.annualEndDate)} />
+                <KV label="Monthly" value={fmtDate(member.monthlyEndDate)} />
+                <KV label="Daily rate" value={member.membershipStatus === "active" ? "₱70" : "₱75"} last />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-gray-300 font-inter text-[13px]">
+            {isLoading ? "Loading members…" : "Select a member"}
+          </div>
+        )}
+=======
         <div className="flex-1 p-4 lg:p-5.5 min-w-0">
           {detailLoading || !detail ? (
             <div className="h-full flex items-center justify-center text-gray-300 font-inter text-sm">
@@ -268,11 +403,26 @@ export function MembersView({ onToast }: MembersViewProps) {
             </>
           )}
         </div>
+>>>>>>> origin/dev
       </div>
 
       <AddMemberModal
         open={addOpen}
         onClose={() => setAddOpen(false)}
+<<<<<<< HEAD
+        onConfirm={(t, s) => { setAddOpen(false); onToast(t, s); loadMembers(search); }}
+      />
+      <EditMemberModal
+        open={editOpen}
+        member={member ? { name: member.fullName, id: member.memberId, contact: member.contactNumber, birth: member.dateOfBirth ?? "", address: member.address, emergency: member.emergencyContact ?? "" } : null}
+        onClose={() => setEditOpen(false)}
+        onConfirm={(t, s) => { setEditOpen(false); onToast(t, s); loadMembers(search); }}
+      />
+      <QRModal
+        open={qrOpen}
+        memberName={member?.fullName ?? ""}
+        memberId={member?.memberId ?? ""}
+=======
         onConfirm={(t, s) => { setAddOpen(false); onToast(t, s); fetchMembers(); }}
       />
       <EditMemberModal
@@ -286,11 +436,20 @@ export function MembersView({ onToast }: MembersViewProps) {
         memberName={detail?.fullName ?? ""}
         memberId={detail?.memberId ?? ""}
         memberNumericId={detail?.id ?? null}
+>>>>>>> origin/dev
         onClose={() => setQrOpen(false)}
         onConfirm={(t, s) => { setQrOpen(false); onToast(t, s); }}
       />
       <ManageMembershipModal
         open={manageOpen}
+<<<<<<< HEAD
+        memberName={member?.fullName ?? ""}
+        memberId={member?.memberId ?? ""}
+        memberDbId={member?.id ?? 0}
+        memberStatus={member?.membershipStatus ?? "unassigned"}
+        onClose={() => setManageOpen(false)}
+        onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); loadMembers(search); }}
+=======
         memberName={detail?.fullName ?? ""}
         memberId={detail?.memberId ?? ""}
         memberNumericId={detail?.id ?? null}
@@ -299,6 +458,7 @@ export function MembersView({ onToast }: MembersViewProps) {
         annualEndDate={detail?.latestMembership?.endDate ?? null}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); fetchMembers(); fetchDetail(); }}
+>>>>>>> origin/dev
       />
     </>
   );
