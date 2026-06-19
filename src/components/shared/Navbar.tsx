@@ -88,7 +88,16 @@ export default function Navbar() {
                 Status
               </Link>
               <button
-                onClick={() => { /* TODO: backend logout */ }}
+                onClick={async () => {
+                  try {
+                    await fetch("/api/auth/logout", { method: "POST" });
+                    sessionStorage.removeItem("member_data");
+                    setIsLoggedIn(false);
+                    window.location.href = "/login";
+                  } catch (e) {
+                    console.error("Logout failed:", e);
+                  }
+                }}
                 className="font-space text-xs font-bold border border-gym-dark/20 text-gym-dark rounded-full py-2 px-4 hover:bg-gym-dark/5 transition-colors flex items-center gap-1.5"
               >
                 <LogOut size={13} />
@@ -185,7 +194,16 @@ export default function Navbar() {
               {/* Logout row (logged-in only) */}
               {isLoggedIn && (
                 <button
-                  onClick={() => { /* TODO: backend logout */ }}
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/auth/logout", { method: "POST" });
+                      sessionStorage.removeItem("member_data");
+                      setIsLoggedIn(false);
+                      window.location.href = "/login";
+                    } catch (e) {
+                      console.error("Logout failed:", e);
+                    }
+                  }}
                   className="flex items-center gap-3 py-3 px-1 mt-1 opacity-50 hover:opacity-100 transition-opacity w-full text-left"
                 >
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gym-gray-bg">
