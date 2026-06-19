@@ -627,11 +627,23 @@ export default function MembershipStatusForm() {
                   </span>
                 </div>
 
-                <div className="bg-amber-50 rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0">
-                  <span className="font-inter font-semibold text-xs leading-[16.5px] text-amber-600 tracking-wide">
-                    Expiring soon
-                  </span>
-                </div>
+                {monthlyEndDate && (
+                  <div className={`rounded-full px-2.5 py-0.5 flex items-center justify-center shrink-0 ${
+                    getDaysRemaining(monthlyEndDate) === 0 ? "bg-red-50" :
+                    getDaysRemaining(monthlyEndDate) <= 7 ? "bg-amber-50" :
+                    "bg-green-50"
+                  }`}>
+                    <span className={`font-inter font-semibold text-xs leading-[16.5px] tracking-wide ${
+                      getDaysRemaining(monthlyEndDate) === 0 ? "text-red-600" :
+                      getDaysRemaining(monthlyEndDate) <= 7 ? "text-amber-600" :
+                      "text-green-600"
+                    }`}>
+                      {getDaysRemaining(monthlyEndDate) === 0 ? "Expired" :
+                       getDaysRemaining(monthlyEndDate) <= 7 ? "Expiring soon" :
+                       "Active"}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Plan Row */}
@@ -651,33 +663,35 @@ export default function MembershipStatusForm() {
                     <span className="font-inter font-normal text-xs text-gym-gray">
                       Expires
                     </span>
-                    <span className="font-inter font-semibold text-xs text-amber-600">
+                    <span className={`font-inter font-semibold text-xs ${getDaysRemaining(monthlyEndDate) <= 7 ? 'text-amber-600' : 'text-gym-dark'}`}>
                       {getFormattedDate(monthlyEndDate)}
                     </span>
                   </div>
 
                   {/* Alert Warning Row */}
-                  <div className="border-t border-gray-200 pt-3 flex items-center gap-1.5 text-amber-600">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="shrink-0"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                    <span className="font-inter font-normal text-xs leading-tight">
-                      {getDaysRemaining(monthlyEndDate)} days left &mdash; renew at the counter
-                    </span>
-                  </div>
+                  {getDaysRemaining(monthlyEndDate) <= 7 && (
+                    <div className="border-t border-gray-200 pt-3 flex items-center gap-1.5 text-amber-600">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="shrink-0"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span className="font-inter font-normal text-xs leading-tight">
+                        {getDaysRemaining(monthlyEndDate) === 0 ? "Plan expired — renew at the counter" : `${getDaysRemaining(monthlyEndDate)} days left — renew at the counter`}
+                      </span>
+                    </div>
+                  )}
                 </>
               )}
             </div>
