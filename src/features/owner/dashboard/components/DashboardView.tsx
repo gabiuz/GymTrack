@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from "recharts";
 
 type DashTab = "overview" | "revenue" | "attendance" | "membership";
-type Period3   = "Today" | "Week" | "Month";
+type Period3 = "Today" | "Week" | "Month";
 type PeriodRev = "Week" | "Month" | "Year";
 type PeriodAtt = "Week" | "Month";
 
@@ -28,9 +28,8 @@ function PeriodToggle<T extends string>({ value, onChange, options }: {
     <div className="inline-flex bg-gray-100 rounded-full p-1 border border-black/8">
       {options.map((o) => (
         <button key={o} onClick={() => onChange(o)}
-          className={`px-3.5 py-1.5 rounded-full text-[11px] cursor-pointer font-inter border-none transition-all duration-100 ${
-            o === value ? "bg-gym-lime text-gym-dark font-bold" : "bg-transparent text-gray-400 font-medium hover:text-gray-600"
-          }`}
+          className={`px-3.5 py-1.5 rounded-full text-[11px] cursor-pointer font-inter border-none transition-all duration-100 ${o === value ? "bg-gym-lime text-gym-dark font-bold" : "bg-transparent text-gray-400 font-medium hover:text-gray-600"
+            }`}
         >{o}</button>
       ))}
     </div>
@@ -79,8 +78,8 @@ function Skeleton({ className }: { className: string }) {
 
 /* ── Overview Tab ── */
 function OverviewTab() {
-  const [period, setPeriod]   = useState<Period3>("Today");
-  const [data, setData]       = useState<Record<string, number | object> | null>(null);
+  const [period, setPeriod] = useState<Period3>("Today");
+  const [data, setData] = useState<Record<string, number | object> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const rangeMap: Record<Period3, string> = { Today: "today", Week: "week", Month: "month" };
@@ -102,7 +101,13 @@ function OverviewTab() {
     revenueChart: { date: string; amount: number }[];
   } | null;
 
-  const chartData = d?.revenueChart.map((r) => ({ label: r.date.slice(5), val: r.amount })) ?? [];
+  const chartData = d?.revenueChart.map((r) => {
+    const dObj = new Date(r.date);
+    return {
+      label: isNaN(dObj.getTime()) ? r.date.slice(5) : dObj.toLocaleDateString("en-PH", { weekday: "short" }),
+      val: r.amount
+    };
+  }) ?? [];
 
   return (
     <div>
@@ -119,11 +124,11 @@ function OverviewTab() {
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3.5">
           <KpiCard label="Today's visitors" value={String(d?.todayVisitors ?? 0)} sub="check-ins today" />
-          <KpiCard label="Today's revenue"  value={`₱${(d?.todayRevenue ?? 0).toLocaleString()}`} />
-          <KpiCard label="Active members"   value={String(d?.activeMembers ?? 0)} />
-          <KpiCard label="Active plans"     value={String(d?.activePlans ?? 0)} sub="monthly subscriptions" />
-          <KpiCard label="Expiring (7d)"    value={String(d?.expiringIn7Days ?? 0)} valueColor="text-amber-500" sub="need renewal" />
-          <KpiCard label="New this month"   value={String(d?.newThisMonth ?? 0)} sub="joined" subColor="text-green-600" />
+          <KpiCard label="Today's revenue" value={`₱${(d?.todayRevenue ?? 0).toLocaleString()}`} />
+          <KpiCard label="Active members" value={String(d?.activeMembers ?? 0)} />
+          <KpiCard label="Active plans" value={String(d?.activePlans ?? 0)} sub="monthly subscriptions" />
+          <KpiCard label="Expiring (7d)" value={String(d?.expiringIn7Days ?? 0)} valueColor="text-amber-500" sub="need renewal" />
+          <KpiCard label="New this month" value={String(d?.newThisMonth ?? 0)} sub="joined" subColor="text-green-600" />
         </div>
       )}
 
@@ -140,8 +145,8 @@ function OverviewTab() {
           {loading ? <Skeleton className="h-[80px]" /> : (
             [
               { color: "text-amber-500", label: `${d?.needsAttention.expiringSoon ?? 0} expiring soon` },
-              { color: "text-red-500",   label: `${d?.needsAttention.expired ?? 0} expired` },
-              { color: "text-gray-400",  label: `${d?.needsAttention.unassigned ?? 0} unassigned` },
+              { color: "text-red-500", label: `${d?.needsAttention.expired ?? 0} expired` },
+              { color: "text-gray-400", label: `${d?.needsAttention.unassigned ?? 0} unassigned` },
             ].map((row, i, arr) => (
               <div key={row.label} className={`flex items-center gap-2 text-[12px] py-2 font-inter ${i < arr.length - 1 ? "border-b border-black/8" : ""}`}>
                 <span className={`w-1.5 h-1.5 rounded-full bg-current ${row.color} shrink-0`} />
@@ -157,8 +162,8 @@ function OverviewTab() {
 
 /* ── Revenue Tab ── */
 function RevenueTab() {
-  const [period, setPeriod]   = useState<PeriodRev>("Month");
-  const [data, setData]       = useState<Record<string, unknown> | null>(null);
+  const [period, setPeriod] = useState<PeriodRev>("Month");
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const rangeMap: Record<PeriodRev, string> = { Week: "week", Month: "month", Year: "year" };
@@ -184,9 +189,9 @@ function RevenueTab() {
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         {loading ? Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="flex-1 h-[82px] rounded-xl" />) : (
           <>
-            <KpiCard label="Total revenue"  value={`₱${(d?.totalRevenue ?? 0).toLocaleString()}`} />
-            <KpiCard label="Avg / day"      value={`₱${(d?.avgPerDay ?? 0).toLocaleString()}`} />
-            <KpiCard label="Transactions"   value={String(d?.totalTransactions ?? 0)} />
+            <KpiCard label="Total revenue" value={`₱${(d?.totalRevenue ?? 0).toLocaleString()}`} />
+            <KpiCard label="Avg / day" value={`₱${(d?.avgPerDay ?? 0).toLocaleString()}`} />
+            <KpiCard label="Transactions" value={String(d?.totalTransactions ?? 0)} />
           </>
         )}
       </div>
@@ -195,8 +200,8 @@ function RevenueTab() {
           <div className="text-[12px] font-semibold text-gym-dark mb-3">Revenue by type</div>
           {loading ? <Skeleton className="h-[90px]" /> : (
             <>
-              <RevBar label="Monthly plans"   value={`₱${(d?.byType.monthlyPlans ?? 0).toLocaleString()}`}   pct={pct(d?.byType.monthlyPlans ?? 0)} />
-              <RevBar label="Daily visits"    value={`₱${(d?.byType.dailyVisits ?? 0).toLocaleString()}`}    pct={pct(d?.byType.dailyVisits ?? 0)} opacity={0.5} />
+              <RevBar label="Monthly plans" value={`₱${(d?.byType.monthlyPlans ?? 0).toLocaleString()}`} pct={pct(d?.byType.monthlyPlans ?? 0)} />
+              <RevBar label="Daily visits" value={`₱${(d?.byType.dailyVisits ?? 0).toLocaleString()}`} pct={pct(d?.byType.dailyVisits ?? 0)} opacity={0.5} />
               <RevBar label="Membership fees" value={`₱${(d?.byType.membershipFees ?? 0).toLocaleString()}`} pct={pct(d?.byType.membershipFees ?? 0)} opacity={0.28} />
             </>
           )}
@@ -212,8 +217,8 @@ function RevenueTab() {
 
 /* ── Attendance Tab ── */
 function AttendanceTab() {
-  const [period, setPeriod]   = useState<PeriodAtt>("Month");
-  const [data, setData]       = useState<Record<string, unknown> | null>(null);
+  const [period, setPeriod] = useState<PeriodAtt>("Month");
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   const rangeMap: Record<PeriodAtt, string> = { Week: "week", Month: "month" };
@@ -226,7 +231,7 @@ function AttendanceTab() {
 
   type AttData = { totalCheckIns: number; avgPerDay: number; busiestDay: string; peakHour: string; byDayOfWeek: { day: string; count: number }[]; byHour: { hour: string; count: number }[]; visitMix: { monthlyPlan: number; dailyMember: number; dailyGuest: number } };
   const d = data as AttData | null;
-  const dayData  = d?.byDayOfWeek.map((r) => ({ label: r.day, val: r.count })) ?? [];
+  const dayData = d?.byDayOfWeek.map((r) => ({ label: r.day, val: r.count })) ?? [];
   const hourData = d?.byHour.map((r) => ({ label: r.hour, val: r.count })) ?? [];
 
   return (
@@ -239,9 +244,9 @@ function AttendanceTab() {
         {loading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="flex-1 h-[82px] rounded-xl" />) : (
           <>
             <KpiCard label="Total check-ins" value={String(d?.totalCheckIns ?? 0)} />
-            <KpiCard label="Avg / day"       value={String(d?.avgPerDay ?? 0)} sub="visitors" />
-            <KpiCard label="Busiest day"     value={d?.busiestDay ?? "—"} />
-            <KpiCard label="Peak hour"       value={d?.peakHour ?? "—"} />
+            <KpiCard label="Avg / day" value={String(d?.avgPerDay ?? 0)} sub="visitors" />
+            <KpiCard label="Busiest day" value={d?.busiestDay ?? "—"} />
+            <KpiCard label="Peak hour" value={d?.peakHour ?? "—"} />
           </>
         )}
       </div>
@@ -259,9 +264,9 @@ function AttendanceTab() {
         <span className="text-[12px] font-semibold text-gym-dark">Visit mix</span>
         {loading ? <Skeleton className="h-4 w-48" /> : (
           [
-            { label: `Monthly · ${d?.visitMix.monthlyPlan ?? 0}%`,    opacity: 1 },
+            { label: `Monthly · ${d?.visitMix.monthlyPlan ?? 0}%`, opacity: 1 },
             { label: `Daily member · ${d?.visitMix.dailyMember ?? 0}%`, opacity: 0.55 },
-            { label: `Daily guest · ${d?.visitMix.dailyGuest ?? 0}%`,  opacity: 0.28 },
+            { label: `Daily guest · ${d?.visitMix.dailyGuest ?? 0}%`, opacity: 0.28 },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-1.5 text-[12px] text-gym-dark">
               <span className="w-2.5 h-2.5 rounded-sm bg-gym-lime shrink-0" style={{ opacity: item.opacity }} />
@@ -276,7 +281,7 @@ function AttendanceTab() {
 
 /* ── Membership Tab ── */
 function MembershipTab() {
-  const [data, setData]       = useState<Record<string, unknown> | null>(null);
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -284,7 +289,7 @@ function MembershipTab() {
       .then((r) => r.json()).then(setData).finally(() => setLoading(false));
   }, []);
 
-  type MemData = { activeMembers: number; newThisMonth: number; expiredLast30Days: number; renewalRate: number; memberGrowthChart: { month: string; count: number }[]; activePlansByType: { oneMonth: number; threeMonths: number; sixMonths: number; dailyVisitOnly: number } };
+  type MemData = { activeMembers: number; newThisMonth: number; expiredLast30Days: number; expiringThisMonth: number; renewalRate: number; memberGrowthChart: { month: string; count: number }[]; activePlansByType: { oneMonth: number; threeMonths: number; sixMonths: number; dailyVisitOnly: number } };
   const d = data as MemData | null;
   const growthData = d?.memberGrowthChart.map((r) => ({ label: r.month, val: r.count })) ?? [];
   const totalPlans = (d?.activePlansByType.oneMonth ?? 0) + (d?.activePlansByType.threeMonths ?? 0) + (d?.activePlansByType.sixMonths ?? 0) || 1;
@@ -294,15 +299,15 @@ function MembershipTab() {
     <div>
       <div className="flex items-center justify-between mb-4.5">
         <h3 className="font-space font-bold text-[17px] tracking-tight text-gym-dark m-0">Membership</h3>
-        <span className="text-[11px] text-gray-400 font-inter">current snapshot</span>
+
       </div>
       <div className="flex flex-col lg:flex-row gap-3 mb-4">
         {loading ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="flex-1 h-[82px] rounded-xl" />) : (
           <>
-            <KpiCard label="Active members"  value={String(d?.activeMembers ?? 0)} />
-            <KpiCard label="New this month"  value={`+${d?.newThisMonth ?? 0}`} valueColor="text-green-600" sub="joined" />
-            <KpiCard label="Expired (30d)"   value={String(d?.expiredLast30Days ?? 0)} valueColor="text-red-500" sub="not renewed" />
-            <KpiCard label="Renewal rate"    value={`${d?.renewalRate ?? 0}%`} sub={d?.renewalRate && d.renewalRate >= 75 ? "healthy" : "needs attention"} subColor={d?.renewalRate && d.renewalRate >= 75 ? "text-green-600" : "text-amber-500"} />
+            <KpiCard label="Active members" value={String(d?.activeMembers ?? 0)} />
+            <KpiCard label="New this month" value={`+${d?.newThisMonth ?? 0}`} valueColor="text-green-600" sub="joined" />
+            <KpiCard label="Expiring this month" value={String(d?.expiringThisMonth ?? 0)} valueColor="text-amber-500" sub="needs renewal" />
+            <KpiCard label="Renewal rate" value={`${d?.renewalRate ?? 0}%`} sub={d?.renewalRate && d.renewalRate >= 75 ? "healthy" : "needs attention"} subColor={d?.renewalRate && d.renewalRate >= 75 ? "text-green-600" : "text-amber-500"} />
           </>
         )}
       </div>
@@ -317,9 +322,9 @@ function MembershipTab() {
           <div className="text-[12px] font-semibold text-gym-dark mb-3">Active plans by type</div>
           {loading ? <Skeleton className="h-[90px]" /> : (
             <>
-              <RevBar label="1 month"  value={String(d?.activePlansByType.oneMonth ?? 0)}    pct={pct(d?.activePlansByType.oneMonth ?? 0)} />
+              <RevBar label="1 month" value={String(d?.activePlansByType.oneMonth ?? 0)} pct={pct(d?.activePlansByType.oneMonth ?? 0)} />
               <RevBar label="3 months" value={String(d?.activePlansByType.threeMonths ?? 0)} pct={pct(d?.activePlansByType.threeMonths ?? 0)} opacity={0.55} />
-              <RevBar label="6 months" value={String(d?.activePlansByType.sixMonths ?? 0)}   pct={pct(d?.activePlansByType.sixMonths ?? 0)} opacity={0.28} />
+              <RevBar label="6 months" value={String(d?.activePlansByType.sixMonths ?? 0)} pct={pct(d?.activePlansByType.sixMonths ?? 0)} opacity={0.28} />
               <div className="mt-3 pt-2.5 border-t border-black/8 text-[11px] text-gray-400 font-inter">{d?.activePlansByType.dailyVisitOnly ?? 0} on daily-visit only</div>
             </>
           )}
@@ -341,19 +346,18 @@ export function DashboardView() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-4.5 py-1.5 rounded-full text-[13px] cursor-pointer font-inter border-none transition-all duration-100 capitalize ${
-              tab === t ? "bg-gym-lime text-gym-dark font-bold" : "bg-transparent text-gray-400 font-medium hover:text-gray-600"
-            }`}
+            className={`px-4.5 py-1.5 rounded-full text-[13px] cursor-pointer font-inter border-none transition-all duration-100 capitalize ${tab === t ? "bg-gym-lime text-gym-dark font-bold" : "bg-transparent text-gray-400 font-medium hover:text-gray-600"
+              }`}
           >
             {t}
           </button>
         ))}
       </div>
 
-      {tab === "overview"    && <OverviewTab />}
-      {tab === "revenue"     && <RevenueTab />}
-      {tab === "attendance"  && <AttendanceTab />}
-      {tab === "membership"  && <MembershipTab />}
+      {tab === "overview" && <OverviewTab />}
+      {tab === "revenue" && <RevenueTab />}
+      {tab === "attendance" && <AttendanceTab />}
+      {tab === "membership" && <MembershipTab />}
     </div>
   );
 }

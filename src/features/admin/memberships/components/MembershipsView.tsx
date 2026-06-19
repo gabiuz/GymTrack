@@ -52,10 +52,33 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [manageOpen, setManageOpen] = useState(false);
-  const [manageCtx, setManageCtx] = useState<{ name: string; id: string; numericId: number | null; status: "active" | "expired" | "unassigned" }>({
-    name: "", id: "", numericId: null, status: "unassigned",
+  const [manageCtx, setManageCtx] = useState<{ name: string; id: string; numericId: number | null; status: "active" | "expired" | "unassigned"; annualEndDate: string | null; monthlyEndDate: string | null }>({
+    name: "", id: "", numericId: null, status: "unassigned", annualEndDate: null, monthlyEndDate: null
   });
-  const [renewingId, setRenewingId] = useState<number | null>(null);
+  const [openingManageId, setOpeningManageId] = useState<number | null>(null);
+
+  const openManageModal = async (memberDbId: number, memberName: string, memberId: string) => {
+    setOpeningManageId(memberDbId);
+    try {
+      const res = await fetch(`/api/members/${memberDbId}`);
+      if (!res.ok) return;
+      const { data: detail } = await res.json();
+      
+      setManageCtx({
+        name: memberName,
+        id: memberId,
+        numericId: memberDbId,
+        status: detail.hasActiveMonthlyPlan || detail.hasActiveMembership ? "active" : detail.latestMembership ? "expired" : "unassigned",
+        annualEndDate: detail.latestMembership?.endDate ?? null,
+        monthlyEndDate: detail.latestMonthlyPlan?.endDate ?? null,
+      });
+      setManageOpen(true);
+    } catch {
+      onToast("Error", "Could not load member details");
+    } finally {
+      setOpeningManageId(null);
+    }
+  };
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -70,25 +93,6 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  async function handleRenewAnnual(row: AnnualRow) {
-    setRenewingId(row.id);
-    try {
-      const res = await fetch("/api/admin/memberships/renew", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId: row.memberDbId }),
-      });
-      if (res.ok) {
-        onToast("Membership renewed", `${row.memberName} · 1 year extension recorded`);
-        fetchData();
-      } else {
-        const d = await res.json();
-        onToast("Renewal failed", d.error ?? "Could not renew membership");
-      }
-    } finally {
-      setRenewingId(null);
-    }
-  }
 
   const activeAnnual = annualData.filter((m) => m.isActive).length;
   const expiredAnnual = annualData.filter((m) => !m.isActive).length;
@@ -166,34 +170,30 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
                     {tab === "annual" ? (
                       isActive ? (
                         <button
-                          onClick={() => {
-                            setManageCtx({ name: m.memberName, id: m.memberId, numericId: m.memberDbId, status: "active" });
-                            setManageOpen(true);
-                          }}
-                          className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
+                          disabled={openingManageId === m.memberDbId}
+                          className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-60"
                         >
-                          Manage
+                          {openingManageId === m.memberDbId ? "…" : "Manage"}
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleRenewAnnual(m as AnnualRow)}
-                          disabled={renewingId === m.id}
+                          onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
+                          disabled={openingManageId === m.memberDbId}
                           className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 disabled:opacity-60"
                         >
-                          {renewingId === m.id ? "…" : "Renew"}
+                          {openingManageId === m.memberDbId ? "…" : "Renew"}
                         </button>
                       )
                     ) : (
                       <button
-                        onClick={() => {
-                          setManageCtx({ name: m.memberName, id: m.memberId, numericId: m.memberDbId, status: isActive ? "active" : "expired" });
-                          setManageOpen(true);
-                        }}
-                        className={`px-3.5 py-1.5 text-xs font-bold font-space rounded-full border-none cursor-pointer hover:opacity-90 ${
+                        onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
+                        disabled={openingManageId === m.memberDbId}
+                        className={`px-3.5 py-1.5 text-xs font-bold font-space rounded-full border-none cursor-pointer hover:opacity-90 disabled:opacity-60 ${
                           isActive ? "bg-white border border-black/14 font-medium font-inter text-gym-dark" : "bg-gym-lime text-gym-dark"
                         }`}
                       >
-                        {isActive ? "Manage" : "Renew"}
+                        {openingManageId === m.memberDbId ? "…" : isActive ? "Manage" : "Renew"}
                       </button>
                     )}
                   </span>
@@ -210,6 +210,8 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
         memberId={manageCtx.id}
         memberNumericId={manageCtx.numericId}
         memberStatus={manageCtx.status}
+        annualEndDate={manageCtx.annualEndDate}
+        monthlyEndDate={manageCtx.monthlyEndDate}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); fetchData(); }}
       />

@@ -129,6 +129,8 @@ export async function GET(req: NextRequest) {
         photoUrl: m.photoUrl,
         createdAt: m.createdAt,
         membershipStatus,
+        annualEndDate: latestMembership?.endDate ?? null,
+        monthlyEndDate: latestPlan?.endDate ?? null,
       }
     })
 

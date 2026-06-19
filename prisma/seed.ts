@@ -11,7 +11,7 @@
  *    spread across today, the last 7 days, last 30 days, and last year.
  */
 
-import { PrismaClient } from '../src/generated/prisma'
+import { PrismaClient, Prisma } from '../src/generated/prisma'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { Pool } from 'pg'
 import bcrypt from 'bcryptjs'
@@ -64,7 +64,19 @@ const ADDRESSES = [
 const GENDERS = ['male', 'female', 'other'] as const
 
 async function main() {
-  console.log('🌱  Starting seed…')
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('Seed cannot be run in production')
+  }
+
+  console.log('🔄 Starting seed...')
+
+  console.log('🧹  Cleaning up database...')
+  await prisma.attendance.deleteMany()
+  await prisma.payment.deleteMany()
+  await prisma.monthlyPlan.deleteMany()
+  await prisma.membership.deleteMany()
+  await prisma.member.deleteMany()
+  await prisma.user.deleteMany({ where: { role: 'customer' } })
 
   const passwordHash = await bcrypt.hash('password123', 10)
 
@@ -149,25 +161,59 @@ async function main() {
 
   // ── 4. Memberships ─────────────────────────────────────────────────────────
   for (const member of members) {
+    // Generate 1-4 past expired memberships
+    for (let i = 1; i <= randomInt(1, 4); i++) {
+      const pastStart = daysAgo(365 * i + randomInt(0, 30))
+      const pastEnd = new Date(pastStart)
+      pastEnd.setFullYear(pastEnd.getFullYear() + 1)
+      await prisma.membership.create({
+        data: { memberId: member.id, startDate: pastStart, endDate: pastEnd },
+      })
+    }
+
+    // Current/recent membership
     const startDate = daysAgo(randomInt(30, 365))
     const endDate   = new Date(startDate)
     endDate.setFullYear(endDate.getFullYear() + 1)
+
+    // ~20% chance this recent one is already expired (e.g., started 400 days ago)
+    if (Math.random() < 0.2) {
+      startDate.setDate(startDate.getDate() - 365)
+      endDate.setFullYear(endDate.getFullYear() - 1)
+    }
 
     await prisma.membership.create({
       data: { memberId: member.id, startDate, endDate },
     })
   }
-  console.log(`✅  Memberships: ${members.length} created`)
+  console.log(`✅  Memberships: history and current created`)
 
   // ── 5. Monthly Plans ───────────────────────────────────────────────────────
   const DURATIONS = [1, 3, 6, 12]
   const AMOUNTS   = { 1: 500, 3: 1350, 6: 2400, 12: 4200 }
 
   for (const member of members.slice(0, 20)) { // 20 out of 30 have a plan
+    // Generate 2-6 past expired monthly plans
+    for (let i = 1; i <= randomInt(2, 6); i++) {
+      const pastStart = daysAgo(30 * i + randomInt(0, 5))
+      const pastEnd = new Date(pastStart)
+      pastEnd.setMonth(pastEnd.getMonth() + 1)
+      await prisma.monthlyPlan.create({
+        data: { memberId: member.id, duration: 1, amount: 500, startDate: pastStart, endDate: pastEnd },
+      })
+    }
+
+    // Current/recent plan
     const duration  = randomPick(DURATIONS)
     const startDate = daysAgo(randomInt(0, 60))
     const endDate   = new Date(startDate)
     endDate.setMonth(endDate.getMonth() + duration)
+
+    // ~30% chance the "current" one is actually expired
+    if (Math.random() < 0.3) {
+      startDate.setDate(startDate.getDate() - 60)
+      endDate.setMonth(endDate.getMonth() - 2)
+    }
 
     await prisma.monthlyPlan.create({
       data: {
@@ -179,7 +225,7 @@ async function main() {
       },
     })
   }
-  console.log('✅  Monthly plans created')
+  console.log('✅  Monthly plans history and current created')
 
   // ── 6. Payments ────────────────────────────────────────────────────────────
   const paymentRows: Parameters<typeof prisma.payment.create>[0]['data'][] = []
@@ -234,7 +280,7 @@ async function main() {
   console.log(`✅  Payments: ${paymentRows.length} created`)
 
   // ── 7. Attendance ──────────────────────────────────────────────────────────
-  const attendanceRows: Parameters<typeof prisma.attendance.createMany>[0]['data'] = []
+  const attendanceRows: Prisma.AttendanceCreateManyInput[] = []
 
   // TODAY — all 30 members check in today
   for (const member of members) {

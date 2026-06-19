@@ -10,10 +10,13 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
-    const range = searchParams.get('range') ?? '7d'
+    let range = searchParams.get('range') ?? '7d'
+    if (!['today', '3d', '7d', '30d'].includes(range)) {
+      range = '7d'
+    }
 
     const rangeDays: Record<string, number> = { today: 0, '3d': 3, '7d': 7, '30d': 30 }
-    const daysBack = rangeDays[range] ?? 7
+    const daysBack = rangeDays[range]
 
     const since = new Date()
     since.setDate(since.getDate() - daysBack)

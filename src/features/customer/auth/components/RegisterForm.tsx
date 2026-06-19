@@ -33,7 +33,8 @@ export default function RegisterForm() {
           setGender(parsed.gender || "Male");
           setDob(parsed.dob || "");
           setEmergencyContact(parsed.emergencyContact || "");
-          setPhotoPreview(parsed.photoPreview || null);
+          setPhotoUrl(parsed.photoUrl || null);
+          setPhotoPreview(parsed.photoUrl || null);
         } catch (e) {
           console.error("Failed to parse saved register data", e);
         }
@@ -92,9 +93,7 @@ export default function RegisterForm() {
           gender,
           dob,
           emergencyContact,
-          // Store Cloudinary URL (preferred) or local preview as fallback
           photoUrl,
-          photoPreview,
         };
         sessionStorage.setItem("register_data", JSON.stringify(data));
       }
