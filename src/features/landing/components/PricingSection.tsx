@@ -29,7 +29,7 @@ function PriceRow({ label, price, period, isLast = false }: PriceRowProps) {
 
 export default function PricingSection() {
   return (
-    <section id="pricing" className="w-full max-w-3xl mx-auto bg-gym-gray-bg px-5 py-10 flex flex-col">
+    <section id="pricing" className="w-full max-w-3xl mx-auto bg-gym-gray-bg px-5 pb-10 flex flex-col">
       {/* Category Label */}
       <span className="font-inter font-bold text-xs leading-[16.5px] text-gym-dark tracking-[1.6px] uppercase">
         Pricing
