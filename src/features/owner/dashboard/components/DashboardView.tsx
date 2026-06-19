@@ -102,7 +102,13 @@ function OverviewTab() {
     revenueChart: { date: string; amount: number }[];
   } | null;
 
-  const chartData = d?.revenueChart.map((r) => ({ label: r.date.slice(5), val: r.amount })) ?? [];
+  const chartData = d?.revenueChart.map((r) => {
+    const dObj = new Date(r.date);
+    return {
+      label: isNaN(dObj.getTime()) ? r.date.slice(5) : dObj.toLocaleDateString("en-PH", { weekday: "short" }),
+      val: r.amount
+    };
+  }) ?? [];
 
   return (
     <div>

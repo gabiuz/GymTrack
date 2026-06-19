@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Trash2 } from "lucide-react";
 
 interface MemberData {
+  id: number;
   name: string;
-  id: string;
+  memberId: string;
   contact?: string;
   birth?: string;
   address?: string;
@@ -45,14 +46,57 @@ function Field({
 
 export function EditMemberModal({ open, member, onClose, onConfirm }: EditMemberModalProps) {
   const [form, setForm] = useState({
-    name: member?.name ?? "",
-    contact: member?.contact ?? "",
-    birth: member?.birth ?? "",
-    address: member?.address ?? "",
-    emergency: member?.emergency ?? "",
+    name: "",
+    contact: "",
+    birth: "",
+    address: "",
+    emergency: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (member) {
+      setForm({
+        name: member.name,
+        contact: member.contact ?? "",
+        birth: member.birth ?? "",
+        address: member.address ?? "",
+        emergency: member.emergency ?? "",
+      });
+      setError("");
+    }
+  }, [member]);
 
   if (!open || !member) return null;
+
+  async function handleSave() {
+    if (!member) return;
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.name || undefined,
+          contactNumber: form.contact || undefined,
+          address: form.address || undefined,
+          emergencyContact: form.emergency || undefined,
+        }),
+      });
+      if (res.ok) {
+        onConfirm("Changes saved", `${form.name} · profile updated`);
+      } else {
+        const data = await res.json();
+        setError(data.error ?? "Failed to save changes");
+      }
+    } catch {
+      setError("Network error — please try again");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div
@@ -74,6 +118,9 @@ export function EditMemberModal({ open, member, onClose, onConfirm }: EditMember
           </div>
           <Field label="Address" value={form.address} onChange={(v) => setForm((f) => ({ ...f, address: v }))} />
           <Field label="Emergency contact" value={form.emergency} onChange={(v) => setForm((f) => ({ ...f, emergency: v }))} />
+          {error && (
+            <div className="mt-1 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
+          )}
         </div>
         <div className="flex justify-between gap-2 px-5 py-3.5 border-t border-black/8">
           <button className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium border border-red-200 rounded-full bg-red-50 text-red-600 cursor-pointer font-inter">
@@ -88,10 +135,11 @@ export function EditMemberModal({ open, member, onClose, onConfirm }: EditMember
               Cancel
             </button>
             <button
-              onClick={() => onConfirm("Changes saved", `${member.name} · profile updated`)}
-              className="px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none"
+              onClick={handleSave}
+              disabled={loading}
+              className="px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none disabled:opacity-60"
             >
-              Save changes
+              {loading ? "Saving…" : "Save changes"}
             </button>
           </div>
         </div>
