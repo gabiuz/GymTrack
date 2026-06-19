@@ -32,12 +32,30 @@ export async function GET(req: NextRequest) {
       const [memberships, total] = await Promise.all([
         prisma.membership.findMany({
           where,
+<<<<<<< HEAD
+=======
+          distinct: ['memberId'],
+>>>>>>> origin/dev
           include: { member: { select: { memberId: true, fullName: true } } },
           orderBy: { endDate: 'desc' },
           skip: (page - 1) * limit,
           take: limit,
         }),
+<<<<<<< HEAD
         prisma.membership.count({ where }),
+=======
+        prisma.member.count({
+          where: search
+            ? {
+                memberships: { some: {} },
+                OR: [
+                  { fullName: { contains: search, mode: 'insensitive' as const } },
+                  { memberId: { contains: search, mode: 'insensitive' as const } },
+                ],
+              }
+            : { memberships: { some: {} } },
+        }),
+>>>>>>> origin/dev
       ])
 
       const data = memberships.map((m) => ({
@@ -65,15 +83,36 @@ export async function GET(req: NextRequest) {
         }
       : {}
 
+<<<<<<< HEAD
     const [plans, total] = await Promise.all([
       prisma.monthlyPlan.findMany({
         where,
+=======
+      const [plans, total] = await Promise.all([
+      prisma.monthlyPlan.findMany({
+        where,
+        distinct: ['memberId'],
+>>>>>>> origin/dev
         include: { member: { select: { memberId: true, fullName: true } } },
         orderBy: { endDate: 'desc' },
         skip: (page - 1) * limit,
         take: limit,
       }),
+<<<<<<< HEAD
       prisma.monthlyPlan.count({ where }),
+=======
+      prisma.member.count({
+        where: search
+          ? {
+              monthlyPlans: { some: {} },
+              OR: [
+                { fullName: { contains: search, mode: 'insensitive' as const } },
+                { memberId: { contains: search, mode: 'insensitive' as const } },
+              ],
+            }
+          : { monthlyPlans: { some: {} } },
+      }),
+>>>>>>> origin/dev
     ])
 
     const data = plans.map((p) => ({

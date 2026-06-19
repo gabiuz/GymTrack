@@ -1,11 +1,21 @@
 "use client";
 
+<<<<<<< HEAD
 import { useState } from "react";
 import { X, Trash2 } from "lucide-react";
 
 interface MemberData {
   name: string;
   id: string;
+=======
+import { useState, useEffect } from "react";
+import { X, Trash2 } from "lucide-react";
+
+interface MemberData {
+  id: number;
+  name: string;
+  memberId: string;
+>>>>>>> origin/dev
   contact?: string;
   birth?: string;
   address?: string;
@@ -45,6 +55,7 @@ function Field({
 
 export function EditMemberModal({ open, member, onClose, onConfirm }: EditMemberModalProps) {
   const [form, setForm] = useState({
+<<<<<<< HEAD
     name: member?.name ?? "",
     contact: member?.contact ?? "",
     birth: member?.birth ?? "",
@@ -54,6 +65,60 @@ export function EditMemberModal({ open, member, onClose, onConfirm }: EditMember
 
   if (!open || !member) return null;
 
+=======
+    name: "",
+    contact: "",
+    birth: "",
+    address: "",
+    emergency: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (member) {
+      setForm({
+        name: member.name,
+        contact: member.contact ?? "",
+        birth: member.birth ?? "",
+        address: member.address ?? "",
+        emergency: member.emergency ?? "",
+      });
+      setError("");
+    }
+  }, [member]);
+
+  if (!open || !member) return null;
+
+  async function handleSave() {
+    if (!member) return;
+    setError("");
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/members/${member.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: form.name || undefined,
+          contactNumber: form.contact || undefined,
+          address: form.address || undefined,
+          emergencyContact: form.emergency || undefined,
+        }),
+      });
+      if (res.ok) {
+        onConfirm("Changes saved", `${form.name} · profile updated`);
+      } else {
+        const data = await res.json();
+        setError(data.error ?? "Failed to save changes");
+      }
+    } catch {
+      setError("Network error — please try again");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+>>>>>>> origin/dev
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -74,6 +139,12 @@ export function EditMemberModal({ open, member, onClose, onConfirm }: EditMember
           </div>
           <Field label="Address" value={form.address} onChange={(v) => setForm((f) => ({ ...f, address: v }))} />
           <Field label="Emergency contact" value={form.emergency} onChange={(v) => setForm((f) => ({ ...f, emergency: v }))} />
+<<<<<<< HEAD
+=======
+          {error && (
+            <div className="mt-1 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
+          )}
+>>>>>>> origin/dev
         </div>
         <div className="flex justify-between gap-2 px-5 py-3.5 border-t border-black/8">
           <button className="flex items-center gap-1.5 px-3.5 py-2.5 text-[13px] font-medium border border-red-200 rounded-full bg-red-50 text-red-600 cursor-pointer font-inter">
@@ -88,10 +159,18 @@ export function EditMemberModal({ open, member, onClose, onConfirm }: EditMember
               Cancel
             </button>
             <button
+<<<<<<< HEAD
               onClick={() => onConfirm("Changes saved", `${member.name} · profile updated`)}
               className="px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none"
             >
               Save changes
+=======
+              onClick={handleSave}
+              disabled={loading}
+              className="px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none disabled:opacity-60"
+            >
+              {loading ? "Saving…" : "Save changes"}
+>>>>>>> origin/dev
             </button>
           </div>
         </div>

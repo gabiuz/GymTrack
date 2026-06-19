@@ -36,7 +36,14 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
+<<<<<<< HEAD
     const range = searchParams.get('range') ?? 'month'
+=======
+    let range = searchParams.get('range') ?? 'month'
+    if (!['week', 'month'].includes(range)) {
+      range = 'month'
+    }
+>>>>>>> origin/dev
 
     const now = new Date()
     const days = range === 'week' ? 7 : 30

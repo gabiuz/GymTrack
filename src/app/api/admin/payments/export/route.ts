@@ -24,7 +24,14 @@ export async function GET(req: NextRequest) {
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
+<<<<<<< HEAD
     const range = searchParams.get('range') ?? 'today'
+=======
+    let range = searchParams.get('range') ?? 'today'
+    if (!['today', 'week', 'month'].includes(range)) {
+      range = 'today'
+    }
+>>>>>>> origin/dev
 
     const now = new Date()
     const rangeFilter: Record<string, { from: Date; to: Date }> = {
@@ -56,14 +63,22 @@ export async function GET(req: NextRequest) {
       staffId:       p.staff.id,
     }))
 
+<<<<<<< HEAD
     const rangeLabel = RANGE_LABELS[range] ?? range
+=======
+    const rangeLabel = RANGE_LABELS[range]
+>>>>>>> origin/dev
     const buffer = await generatePaymentExport(exportRows, session.name, rangeLabel, from, to)
 
     // Filename: GymTrack_Payments_Today_16-Jun-2026.xlsx
     const dateSuffix = now.toLocaleDateString('en-PH', {
       day: '2-digit', month: 'short', year: 'numeric',
     }).replace(/ /g, '-')
+<<<<<<< HEAD
     const rangeSlug = { today: 'Today', week: 'This-Week', month: 'This-Month' }[range] ?? range
+=======
+    const rangeSlug = { today: 'Today', week: 'This-Week', month: 'This-Month' }[range]
+>>>>>>> origin/dev
     const filename  = `GymTrack_Payments_${rangeSlug}_${dateSuffix}.xlsx`
 
     return new NextResponse(new Uint8Array(buffer), {

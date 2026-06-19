@@ -1,15 +1,24 @@
 "use client";
 
+<<<<<<< HEAD
+=======
+import { useState, useEffect } from "react";
+>>>>>>> origin/dev
 import { X, Download } from "lucide-react";
 
 interface QRModalProps {
   open: boolean;
   memberName: string;
   memberId: string;
+<<<<<<< HEAD
+=======
+  memberNumericId: number | null;
+>>>>>>> origin/dev
   onClose: () => void;
   onConfirm: (title: string, sub: string) => void;
 }
 
+<<<<<<< HEAD
 function QRPattern() {
   const mm = 4;
   let seed = 11;
@@ -47,6 +56,23 @@ function QRPattern() {
 
 export function QRModal({ open, memberName, memberId, onClose, onConfirm }: QRModalProps) {
   if (!open) return null;
+=======
+export function QRModal({ open, memberName, memberId, memberNumericId, onClose, onConfirm }: QRModalProps) {
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || !memberNumericId) return;
+    setLoading(true);
+    fetch(`/api/members/${memberNumericId}`)
+      .then((r) => r.json())
+      .then((data) => setQrCode(data.data?.qrCode ?? null))
+      .finally(() => setLoading(false));
+  }, [open, memberNumericId]);
+
+  if (!open) return null;
+
+>>>>>>> origin/dev
   return (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -64,11 +90,23 @@ export function QRModal({ open, memberName, memberId, onClose, onConfirm }: QRMo
           <div className="text-xs text-gray-400 font-mono mb-4.5 mt-0.5">{memberId}</div>
           <div className="bg-gym-dark rounded-xl px-5 pt-5 pb-4 mb-4 inline-block">
             <div className="bg-white rounded-lg p-2 inline-block">
+<<<<<<< HEAD
               <QRPattern />
+=======
+              {loading ? (
+                <div className="w-[160px] h-[160px] flex items-center justify-center text-gray-300 text-xs font-inter">Loading…</div>
+              ) : qrCode ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrCode} alt={`QR Code for ${memberId}`} width={160} height={160} className="block" />
+              ) : (
+                <div className="w-[160px] h-[160px] flex items-center justify-center text-gray-300 text-xs font-inter">No QR code</div>
+              )}
+>>>>>>> origin/dev
             </div>
             <div className="text-xs text-gray-500 font-mono mt-2.5">{memberId}</div>
             <div className="text-[11px] text-gray-600 font-inter mt-0.5">Show this at the counter</div>
           </div>
+<<<<<<< HEAD
           <button
             onClick={() => onConfirm("QR downloaded", `${memberName} · ${memberId}`)}
             className="w-full py-3 text-sm font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 border-none cursor-pointer"
@@ -76,6 +114,27 @@ export function QRModal({ open, memberName, memberId, onClose, onConfirm }: QRMo
             <Download size={14} />
             Download QR
           </button>
+=======
+          {qrCode ? (
+            <a
+              href={qrCode}
+              download={`${memberId}.png`}
+              onClick={() => onConfirm("QR downloaded", `${memberName} · ${memberId}`)}
+              className="w-full py-3 text-sm font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5 border-none cursor-pointer no-underline"
+            >
+              <Download size={14} />
+              Download QR
+            </a>
+          ) : (
+            <button
+              disabled
+              className="w-full py-3 text-sm font-bold font-space rounded-full bg-gray-100 text-gray-400 flex items-center justify-center gap-1.5 border-none cursor-not-allowed"
+            >
+              <Download size={14} />
+              Download QR
+            </button>
+          )}
+>>>>>>> origin/dev
         </div>
       </div>
     </div>

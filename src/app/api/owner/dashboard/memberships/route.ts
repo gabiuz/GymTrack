@@ -13,6 +13,10 @@ export async function GET(req: NextRequest) {
     const subDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() - n); return x }
     const subMonths = (d: Date, n: number) => { const x = new Date(d); x.setMonth(x.getMonth() - n); return x }
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+<<<<<<< HEAD
+=======
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+>>>>>>> origin/dev
     const thirtyDaysAgo = subDays(now, 30)
     const sixMonthsAgo = subMonths(now, 6)
 
@@ -20,6 +24,10 @@ export async function GET(req: NextRequest) {
       activeMembers,
       newThisMonth,
       expiredLast30Days,
+<<<<<<< HEAD
+=======
+      expiringThisMonth,
+>>>>>>> origin/dev
       renewalPayments,
       memberGrowthRows,
       activePlansByDuration,
@@ -28,6 +36,10 @@ export async function GET(req: NextRequest) {
       prisma.membership.groupBy({ by: ['memberId'], where: { endDate: { gte: now } } }).then((r) => r.length),
       prisma.member.count({ where: { createdAt: { gte: startOfMonth } } }),
       prisma.membership.count({ where: { endDate: { gte: thirtyDaysAgo, lt: now } } }),
+<<<<<<< HEAD
+=======
+      prisma.membership.count({ where: { endDate: { gte: now, lte: endOfMonth } } }),
+>>>>>>> origin/dev
       prisma.payment.count({ where: { paymentType: 'membership_fee', paymentDate: { gte: thirtyDaysAgo } } }),
       prisma.$queryRaw<{ month: string; count: number }[]>(
         Prisma.sql`
@@ -59,6 +71,10 @@ export async function GET(req: NextRequest) {
       activeMembers,
       newThisMonth,
       expiredLast30Days,
+<<<<<<< HEAD
+=======
+      expiringThisMonth,
+>>>>>>> origin/dev
       renewalRate,
       memberGrowthChart: memberGrowthRows.map((r) => ({ month: String(r.month), count: Number(r.count) })),
       activePlansByType: {

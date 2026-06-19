@@ -129,6 +129,11 @@ export async function GET(req: NextRequest) {
         photoUrl: m.photoUrl,
         createdAt: m.createdAt,
         membershipStatus,
+<<<<<<< HEAD
+=======
+        annualEndDate: latestMembership?.endDate ?? null,
+        monthlyEndDate: latestPlan?.endDate ?? null,
+>>>>>>> origin/dev
       }
     })
 
@@ -142,6 +147,12 @@ export async function GET(req: NextRequest) {
 // ─── POST /api/members  (public — customer self-registration)
 export async function POST(req: NextRequest) {
   try {
+<<<<<<< HEAD
+=======
+    const postSession = await requireStaffOrOwner(req)
+    if (!postSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+>>>>>>> origin/dev
     const body = await req.json()
 
     // ── Validate with Zod

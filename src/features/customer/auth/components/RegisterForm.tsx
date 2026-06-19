@@ -33,7 +33,12 @@ export default function RegisterForm() {
           setGender(parsed.gender || "Male");
           setDob(parsed.dob || "");
           setEmergencyContact(parsed.emergencyContact || "");
+<<<<<<< HEAD
           setPhotoPreview(parsed.photoPreview || null);
+=======
+          setPhotoUrl(parsed.photoUrl || null);
+          setPhotoPreview(parsed.photoUrl || null);
+>>>>>>> origin/dev
         } catch (e) {
           console.error("Failed to parse saved register data", e);
         }
@@ -92,9 +97,13 @@ export default function RegisterForm() {
           gender,
           dob,
           emergencyContact,
+<<<<<<< HEAD
           // Store Cloudinary URL (preferred) or local preview as fallback
           photoUrl,
           photoPreview,
+=======
+          photoUrl,
+>>>>>>> origin/dev
         };
         sessionStorage.setItem("register_data", JSON.stringify(data));
       }

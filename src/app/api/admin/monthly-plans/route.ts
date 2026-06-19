@@ -30,13 +30,36 @@ export async function POST(req: NextRequest) {
 
     const member = await prisma.member.findUnique({
       where: { id: memberId },
+<<<<<<< HEAD
       select: { id: true },
+=======
+      select: {
+        id: true,
+        monthlyPlans: { orderBy: { endDate: 'desc' }, take: 1, select: { endDate: true } },
+        memberships: { orderBy: { endDate: 'desc' }, take: 1, select: { endDate: true } },
+      },
+>>>>>>> origin/dev
     })
     if (!member) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
+<<<<<<< HEAD
     const startDate = new Date()
+=======
+    const now = new Date()
+    const latestMembership = member.memberships[0]
+    if (!latestMembership || latestMembership.endDate < now) {
+      return NextResponse.json(
+        { error: 'Cannot avail monthly plan without an active annual membership' },
+        { status: 403 }
+      )
+    }
+
+    const latestPlan = member.monthlyPlans[0]
+    const startDate = latestPlan && latestPlan.endDate > now ? new Date(latestPlan.endDate) : new Date()
+
+>>>>>>> origin/dev
     const endDate = new Date(startDate)
     endDate.setMonth(endDate.getMonth() + duration)
 
