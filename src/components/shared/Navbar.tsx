@@ -1,5 +1,14 @@
 "use client";
 
+<<<<<<< HEAD
+import React, { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { AnimatePresence, motion } from "motion/react";
+
+export default function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
+=======
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -42,6 +51,7 @@ export default function Navbar() {
   }, [pathname]);
 
   const navItems = isLoggedIn ? memberNavItems : guestNavItems;
+>>>>>>> origin/dev
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-gray-200">
@@ -67,6 +77,20 @@ export default function Navbar() {
 
         {/* Tablet Navigation Menu */}
         <nav className="hidden sm:flex items-center gap-6">
+<<<<<<< HEAD
+          <Link
+            href="/login"
+            className="font-space text-sm font-bold text-gym-dark hover:opacity-80 transition-opacity ml-2"
+          >
+            Log in
+          </Link>
+          <Link
+            href="/register"
+            className="font-space text-xs font-bold bg-gym-lime text-gym-dark rounded-full py-2 px-4 hover:opacity-90 transition-opacity"
+          >
+            Register now
+          </Link>
+=======
           {isLoggedIn ? (
             <>
               <Link
@@ -120,6 +144,7 @@ export default function Navbar() {
               </Link>
             </>
           )}
+>>>>>>> origin/dev
         </nav>
 
         {/* Hamburger Button (Mobile Only) */}
@@ -154,6 +179,24 @@ export default function Navbar() {
             animate={{ clipPath: "inset(0 0 0% 0)" }}
             exit={{ clipPath: "inset(0 0 100% 0)" }}
             transition={{ duration: 0.25, ease: [0.87, 0, 0.13, 1] }}
+<<<<<<< HEAD
+            className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-md flex flex-col p-4 gap-3 z-50 sm:hidden"
+          >
+            <Link
+              href="/login"
+              onClick={() => setIsOpen(false)}
+              className="font-space text-sm font-bold text-center border border-gym-dark/30 rounded-full py-2.5 px-4 text-gym-dark hover:bg-gym-dark/5 transition-colors"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/register"
+              onClick={() => setIsOpen(false)}
+              className="font-space text-sm font-bold text-center bg-gym-lime text-gym-dark rounded-full py-2.5 px-4 hover:opacity-90 transition-opacity"
+            >
+              Register now
+            </Link>
+=======
             className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-md z-50 sm:hidden"
           >
             {/* Menu section header */}
@@ -215,6 +258,7 @@ export default function Navbar() {
                 </button>
               )}
             </div>
+>>>>>>> origin/dev
           </motion.div>
         )}
       </AnimatePresence>

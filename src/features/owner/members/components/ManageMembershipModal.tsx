@@ -1,6 +1,10 @@
 "use client";
 
+<<<<<<< HEAD
+import { useState } from "react";
+=======
 import { useState, useEffect } from "react";
+>>>>>>> origin/dev
 import { X, User, Check, Banknote } from "lucide-react";
 import { StatusPill } from "@/features/owner/_ui";
 
@@ -8,25 +12,104 @@ interface ManageMembershipModalProps {
   open: boolean;
   memberName: string;
   memberId: string;
+<<<<<<< HEAD
+  memberDbId: number;
+  memberStatus: "active" | "expired" | "unassigned";
+=======
   memberNumericId: number | null;
   memberStatus: "active" | "expired" | "unassigned";
   monthlyEndDate: string | null;
   annualEndDate: string | null;
+>>>>>>> origin/dev
   onClose: () => void;
   onConfirm: (title: string, sub: string) => void;
 }
 
 const plans = [
+<<<<<<< HEAD
+  { key: "none", label: "None",     sub: "daily rate", price: 0,    duration: 0 as 1 | 3 | 6 | 12 | 0 },
+  { key: "1m",   label: "1 month",  sub: "₱799",       price: 799,  duration: 1 as 1 | 3 | 6 | 12 | 0 },
+  { key: "3m",   label: "3 months", sub: "₱2,199",     price: 2199, duration: 3 as 1 | 3 | 6 | 12 | 0 },
+  { key: "6m",   label: "6 months", sub: "₱3,999",     price: 3999, duration: 6 as 1 | 3 | 6 | 12 | 0 },
+=======
   { key: "none", label: "None",     sub: "daily rate", price: 0,    months: 0 },
   { key: "1m",   label: "1 month",  sub: "₱799",       price: 799,  months: 1 },
   { key: "3m",   label: "3 months", sub: "₱2,199",     price: 2199, months: 3 },
   { key: "6m",   label: "6 months", sub: "₱3,999",     price: 3999, months: 6 },
+>>>>>>> origin/dev
 ];
 
 export function ManageMembershipModal({
   open,
   memberName,
   memberId,
+<<<<<<< HEAD
+  memberDbId,
+  memberStatus,
+  onClose,
+  onConfirm,
+}: ManageMembershipModalProps) {
+  const [membership, setMembership] = useState(memberStatus !== "active");
+  const [plan, setPlan]             = useState("1m");
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState("");
+
+  if (!open) return null;
+
+  const membershipFee = membership ? 200 : 0;
+  const selectedPlan  = plans.find((p) => p.key === plan)!;
+  const planFee       = selectedPlan.price;
+  const total         = membershipFee + planFee;
+
+  const expiry = new Date();
+  expiry.setFullYear(expiry.getFullYear() + 1);
+  const expiryStr = expiry.toLocaleDateString("en-PH", { day: "numeric", month: "short", year: "numeric" });
+
+  const pillVariant = memberStatus === "active" ? "active" : memberStatus === "expired" ? "expired" : "unassigned";
+
+  async function handleConfirm() {
+    setError("");
+    setLoading(true);
+    try {
+      const requests: Promise<Response>[] = [];
+
+      if (membership) {
+        requests.push(
+          fetch("/api/owner/memberships/renew", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ memberId: memberDbId }),
+          })
+        );
+      }
+
+      if (plan !== "none" && selectedPlan.duration > 0) {
+        requests.push(
+          fetch("/api/owner/monthly-plans", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ memberId: memberDbId, duration: selectedPlan.duration, amount: planFee }),
+          })
+        );
+      }
+
+      if (requests.length === 0) {
+        setError("Please select at least one option.");
+        setLoading(false);
+        return;
+      }
+
+      const results = await Promise.all(requests);
+      const failed = results.find((r) => !r.ok);
+      if (failed) {
+        const errData = await failed.json().catch(() => ({}));
+        setError((errData as { error?: string }).error ?? "Request failed");
+        setLoading(false);
+        return;
+      }
+
+      onConfirm("Membership activated", `${memberName} · ₱${total.toLocaleString()} recorded`);
+=======
   memberNumericId,
   memberStatus,
   monthlyEndDate,
@@ -129,6 +212,7 @@ export function ManageMembershipModal({
       } else {
         onConfirm("Membership activated", `${memberName} · ₱${total.toLocaleString()} recorded`);
       }
+>>>>>>> origin/dev
     } catch {
       setError("Network error — please try again");
     } finally {
@@ -171,6 +255,20 @@ export function ManageMembershipModal({
             Annual membership
           </div>
           <div
+<<<<<<< HEAD
+            onClick={() => setMembership(!membership)}
+            className={`flex items-center gap-3 mb-5 border rounded-lg px-3.5 py-3 cursor-pointer transition-all duration-100 ${
+              membership ? "border-[2px] border-gym-lime bg-gym-lime/15" : "border border-black/14 bg-gray-50"
+            }`}
+          >
+            <div className={`w-5 h-5 rounded-[5px] flex items-center justify-center shrink-0 transition-all ${
+              membership ? "bg-gym-lime" : "bg-white border border-black/14"
+            }`}>
+              {membership && <Check size={13} color="#000" strokeWidth={3} />}
+            </div>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-gym-dark font-inter">Activate membership</div>
+=======
             onClick={() => {
               if (!hasActiveAnnual) {
                 const nextMembership = !membership;
@@ -199,12 +297,33 @@ export function ManageMembershipModal({
               <div className="text-sm font-semibold text-gym-dark font-inter">
                 {hasActiveAnnual ? "Already active" : "Activate membership"}
               </div>
+>>>>>>> origin/dev
               <div className="text-xs text-gray-400 font-inter">Today → {expiryStr} · 1 year</div>
             </div>
             <span className="text-[15px] font-bold text-gym-dark font-space">₱200</span>
           </div>
 
           {/* Monthly plan */}
+<<<<<<< HEAD
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter">Monthly plan</span>
+            {membership && <span className="text-[11px] text-green-600 font-semibold font-inter">requires membership ✓</span>}
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {plans.map((p) => (
+              <div
+                key={p.key}
+                onClick={() => setPlan(p.key)}
+                className={`border rounded-lg px-3.5 py-3 cursor-pointer text-center transition-all duration-100 ${
+                  plan === p.key ? "border-[2px] border-gym-lime bg-gym-lime/15" : "border border-black/14 bg-white"
+                }`}
+              >
+                <div className="text-sm font-bold text-gym-dark font-space">{p.label}</div>
+                <div className="text-xs text-gray-400 font-inter">{p.sub}</div>
+              </div>
+            ))}
+          </div>
+=======
           <div className="flex items-center justify-between mb-2.5 mt-2">
             <span className="text-[11px] font-semibold text-gray-400 tracking-widest uppercase font-inter">Monthly plan</span>
             {membership && !hasActivePlan && <span className="text-[11px] text-green-600 font-semibold font-inter">requires membership ✓</span>}
@@ -254,6 +373,7 @@ export function ManageMembershipModal({
           {error && (
             <div className="mt-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-inter">{error}</div>
           )}
+>>>>>>> origin/dev
         </div>
 
         {/* Summary */}
@@ -277,6 +397,13 @@ export function ManageMembershipModal({
           </div>
         </div>
 
+<<<<<<< HEAD
+        {error && (
+          <div className="px-5 py-2.5 bg-red-50 border-t border-red-200 text-sm text-red-600 font-inter">{error}</div>
+        )}
+
+=======
+>>>>>>> origin/dev
         <div className="flex justify-end gap-2 px-5 py-3.5 border-t border-black/8">
           <button
             onClick={onClose}
@@ -286,7 +413,11 @@ export function ManageMembershipModal({
           </button>
           <button
             onClick={handleConfirm}
+<<<<<<< HEAD
+            disabled={loading}
+=======
             disabled={loading || (!membership && selectedPlan.months === 0)}
+>>>>>>> origin/dev
             className="flex items-center gap-1.5 px-5 py-2.5 text-[13px] font-bold font-space rounded-full bg-gym-lime text-gym-dark hover:opacity-90 transition-opacity cursor-pointer border-none disabled:opacity-60"
           >
             <Banknote size={15} />

@@ -118,7 +118,11 @@ export function MembersView({ onToast }: MembersViewProps) {
     fetchMembers();
   }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
+<<<<<<< HEAD
+  useEffect(() => {
+=======
   const fetchDetail = useCallback(() => {
+>>>>>>> origin/dev
     if (!selectedId) return;
     setDetailLoading(true);
     fetch(`/api/members/${selectedId}`)
@@ -127,10 +131,13 @@ export function MembersView({ onToast }: MembersViewProps) {
       .finally(() => setDetailLoading(false));
   }, [selectedId]);
 
+<<<<<<< HEAD
+=======
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
 
+>>>>>>> origin/dev
   const memberStatus = detail
     ? detail.hasActiveMonthlyPlan || detail.hasActiveMembership
       ? "active"
@@ -295,10 +302,15 @@ export function MembersView({ onToast }: MembersViewProps) {
         memberId={detail?.memberId ?? ""}
         memberNumericId={detail?.id ?? null}
         memberStatus={memberStatus}
+<<<<<<< HEAD
+        onClose={() => setManageOpen(false)}
+        onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); if (selectedId) setSelectedId(selectedId); }}
+=======
         monthlyEndDate={detail?.latestMonthlyPlan?.endDate ?? null}
         annualEndDate={detail?.latestMembership?.endDate ?? null}
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); fetchMembers(); fetchDetail(); }}
+>>>>>>> origin/dev
       />
     </>
   );

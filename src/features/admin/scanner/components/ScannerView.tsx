@@ -181,10 +181,13 @@ export function ScannerView({ onToast }: ScannerViewProps) {
     go("outcome");
   };
 
+<<<<<<< HEAD
+=======
   const openManage = () => {
     setManageOpen(true);
   };
 
+>>>>>>> origin/dev
   // ── Camera / QR scanner setup ───────────────────────────────────────────
   const stopScanner = useCallback(async () => {
     if (html5QrRef.current) {
@@ -434,7 +437,11 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             <span className="text-[15px] text-[#3A5000] leading-relaxed">No membership or plan on file. Choose how to proceed.</span>
           </div>
           <button
+<<<<<<< HEAD
+            onClick={() => setManageOpen(true)}
+=======
             onClick={() => openManage()}
+>>>>>>> origin/dev
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5"
           >
             Register membership · ₱200/yr
@@ -584,7 +591,11 @@ export function ScannerView({ onToast }: ScannerViewProps) {
             </span>
           </div>
           <button
+<<<<<<< HEAD
+            onClick={() => setManageOpen(true)}
+=======
             onClick={() => openManage()}
+>>>>>>> origin/dev
             className="w-full py-4 text-[15px] font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 mb-2.5"
           >
             Renew monthly plan
@@ -715,8 +726,11 @@ export function ScannerView({ onToast }: ScannerViewProps) {
         memberId={manageCtx.id}
         memberNumericId={manageCtx.numericId}
         memberStatus={manageCtx.status}
+<<<<<<< HEAD
+=======
         monthlyEndDate={null}
         annualEndDate={null}
+>>>>>>> origin/dev
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); go("ready"); }}
       />

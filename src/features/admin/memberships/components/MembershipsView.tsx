@@ -52,6 +52,12 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
   const [monthlyData, setMonthlyData] = useState<MonthlyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [manageOpen, setManageOpen] = useState(false);
+<<<<<<< HEAD
+  const [manageCtx, setManageCtx] = useState<{ name: string; id: string; numericId: number | null; status: "active" | "expired" | "unassigned" }>({
+    name: "", id: "", numericId: null, status: "unassigned",
+  });
+  const [renewingId, setRenewingId] = useState<number | null>(null);
+=======
   const [manageCtx, setManageCtx] = useState<{ name: string; id: string; numericId: number | null; status: "active" | "expired" | "unassigned"; annualEndDate: string | null; monthlyEndDate: string | null }>({
     name: "", id: "", numericId: null, status: "unassigned", annualEndDate: null, monthlyEndDate: null
   });
@@ -79,6 +85,7 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
       setOpeningManageId(null);
     }
   };
+>>>>>>> origin/dev
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -93,6 +100,28 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+<<<<<<< HEAD
+  async function handleRenewAnnual(row: AnnualRow) {
+    setRenewingId(row.id);
+    try {
+      const res = await fetch("/api/admin/memberships/renew", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId: row.memberDbId }),
+      });
+      if (res.ok) {
+        onToast("Membership renewed", `${row.memberName} · 1 year extension recorded`);
+        fetchData();
+      } else {
+        const d = await res.json();
+        onToast("Renewal failed", d.error ?? "Could not renew membership");
+      }
+    } finally {
+      setRenewingId(null);
+    }
+  }
+=======
+>>>>>>> origin/dev
 
   const activeAnnual = annualData.filter((m) => m.isActive).length;
   const expiredAnnual = annualData.filter((m) => !m.isActive).length;
@@ -170,6 +199,23 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
                     {tab === "annual" ? (
                       isActive ? (
                         <button
+<<<<<<< HEAD
+                          onClick={() => {
+                            setManageCtx({ name: m.memberName, id: m.memberId, numericId: m.memberDbId, status: "active" });
+                            setManageOpen(true);
+                          }}
+                          className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors"
+                        >
+                          Manage
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleRenewAnnual(m as AnnualRow)}
+                          disabled={renewingId === m.id}
+                          className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 disabled:opacity-60"
+                        >
+                          {renewingId === m.id ? "…" : "Renew"}
+=======
                           onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
                           disabled={openingManageId === m.memberDbId}
                           className="px-3.5 py-1.5 text-xs font-medium font-inter border border-black/14 rounded-full bg-white text-gym-dark cursor-pointer hover:bg-gray-50 transition-colors disabled:opacity-60"
@@ -183,10 +229,22 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
                           className="px-3.5 py-1.5 text-xs font-bold font-space rounded-full bg-gym-lime text-gym-dark border-none cursor-pointer hover:opacity-90 disabled:opacity-60"
                         >
                           {openingManageId === m.memberDbId ? "…" : "Renew"}
+>>>>>>> origin/dev
                         </button>
                       )
                     ) : (
                       <button
+<<<<<<< HEAD
+                        onClick={() => {
+                          setManageCtx({ name: m.memberName, id: m.memberId, numericId: m.memberDbId, status: isActive ? "active" : "expired" });
+                          setManageOpen(true);
+                        }}
+                        className={`px-3.5 py-1.5 text-xs font-bold font-space rounded-full border-none cursor-pointer hover:opacity-90 ${
+                          isActive ? "bg-white border border-black/14 font-medium font-inter text-gym-dark" : "bg-gym-lime text-gym-dark"
+                        }`}
+                      >
+                        {isActive ? "Manage" : "Renew"}
+=======
                         onClick={() => openManageModal(m.memberDbId, m.memberName, m.memberId)}
                         disabled={openingManageId === m.memberDbId}
                         className={`px-3.5 py-1.5 text-xs font-bold font-space rounded-full border-none cursor-pointer hover:opacity-90 disabled:opacity-60 ${
@@ -194,6 +252,7 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
                         }`}
                       >
                         {openingManageId === m.memberDbId ? "…" : isActive ? "Manage" : "Renew"}
+>>>>>>> origin/dev
                       </button>
                     )}
                   </span>
@@ -210,8 +269,11 @@ export function MembershipsView({ onToast }: MembershipsViewProps) {
         memberId={manageCtx.id}
         memberNumericId={manageCtx.numericId}
         memberStatus={manageCtx.status}
+<<<<<<< HEAD
+=======
         annualEndDate={manageCtx.annualEndDate}
         monthlyEndDate={manageCtx.monthlyEndDate}
+>>>>>>> origin/dev
         onClose={() => setManageOpen(false)}
         onConfirm={(t, s) => { setManageOpen(false); onToast(t, s); fetchData(); }}
       />

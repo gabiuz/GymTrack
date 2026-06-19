@@ -21,6 +21,12 @@ export async function POST(req: NextRequest) {
 
     const { memberId, duration, amount } = parsed.data
 
+<<<<<<< HEAD
+    const member = await prisma.member.findUnique({ where: { id: memberId }, select: { id: true } })
+    if (!member) return NextResponse.json({ error: 'Member not found' }, { status: 404 })
+
+    const startDate = new Date()
+=======
     const member = await prisma.member.findUnique({
       where: { id: memberId },
       select: {
@@ -43,6 +49,7 @@ export async function POST(req: NextRequest) {
     const latestPlan = member.monthlyPlans[0]
     const startDate = latestPlan && latestPlan.endDate > now ? new Date(latestPlan.endDate) : new Date()
 
+>>>>>>> origin/dev
     const endDate = new Date(startDate)
     endDate.setMonth(endDate.getMonth() + duration)
 
